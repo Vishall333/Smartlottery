@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instagram Media Downloader</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 650px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fafafa;
+    }
+    .container {
+      background: #fff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    h1 {
+      color: #E1306C;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      background: #E1306C;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #c42d61;
+    }
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+      display: none;
+      text-align: center;
+    }
+    .error {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #666;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(225,48,108,0.2);
+      border-top: 3px solid #E1306C;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .media-container {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .media-preview {
+      max-width: 100%;
+      max-height: 500px;
+      border-radius: 8px;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .media-preview.active {
+      display: inline-block;
+      animation: fadeIn 0.3s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .download-btn {
+      display: none;
+      background: #00C851;
+      color: white;
+      padding: 12px 25px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 15px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Instagram Media Downloader</h1>
+    <div class="input-group">
+      <input type="text" id="url" placeholder="Paste Instagram post/reel URL">
+      <button id="fetch-btn">Download</button>
+    </div>
+    
+    <div id="status" class="status loading">
+      <div class="spinner"></div>
+      <span>Processing...</span>
+    </div>
+    
+    <div id="error" class="status error"></div>
+    
+    <div class="media-container">
+      <div id="media-display"></div>
+      <a id="download-btn" class="download-btn" target="_blank" rel="noopener noreferrer">Download</a>
+    </div>
+  </div>
+
+<script>
+    const CONFIG = {
+        proxies: [
+            "https://corsproxy.io/?", 
+            "https://api.codetabs.com/v1/proxy/?quest="
+        ],
+        timeout: 10000,
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    };
+
+    const elements = {
+        url: document.getElementById('url'),
+        btn: document.getElementById('fetch-btn'),
+        status: document.getElementById('status'),
+        error: document.getElementById('error'),
+        media: document.getElementById('media-display'),
+        download: document.getElementById('download-btn')
+    };
+
+    async function handleDownload() {
+        const url = elements.url.value.trim();
+        
+        if (!isValidUrl(url)) {
+            showError("Invalid Instagram URL. Use format: https://www.instagram.com/p/... or /reel/...");
+            return;
+        }
+
+        resetUI();
+        showLoading();
+        disableButton(true);
+
+        try {
+            const cleanUrl = cleanUrlParams(url);
+            const html = await fetchWithProxies(cleanUrl);
+            const media = extractMedia(html);
+
+            if (!media) throw new Error("Failed to extract media. Maybe Instagram updated.");
+            
+            displayMedia(media);
+
+        } catch (error) {
+            showError(error.message.includes('timeout') 
+                ? "Connection timeout. Please try again." 
+                : error.message
+            );
+        } finally {
+            hideLoading();
+            disableButton(false);
+        }
+    }
+
+    async function fetchWithProxies(url) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), CONFIG.timeout);
+
+        try {
+            const proxy = CONFIG.proxies[Math.floor(Math.random() * CONFIG.proxies.length)];
+            const response = await fetch(proxy + encodeURIComponent(url), {
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': CONFIG.userAgent,
+                    'Accept-Language': 'en-US,en;q=0.9'
+                }
+            });
+
+            if (!response.ok) throw new Error('Blocked by Instagram or Proxy Error');
+
+            return await response.text();
+        } catch (error) {
+            throw error;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    function extractMedia(html) {
+        // Try Open Graph meta tags
+        const ogVideo = html.match(/<meta[^>]*property="og:video"[^>]*content="([^"]+)"/i);
+        const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+
+        if (ogVideo) {
+            return { url: ogVideo[1], type: 'video' };
+        } else if (ogImage) {
+            return { url: ogImage[1], type: 'image' };
+        }
+
+        // Fallback: Search for video or image URLs manually
+        const videoSrc = html.match(/<video[^>]+src="([^"]+)"/i);
+        const imageSrc = html.match(/<img[^>]+src="(https:\/\/[^"]+\.(jpg|jpeg|png|webp))"/i);
+
+        if (videoSrc) {
+            return { url: videoSrc[1], type: 'video' };
+        } else if (imageSrc) {
+            return { url: imageSrc[1], type: 'image' };
+        }
+
+        return null;
+    }
+
+    function displayMedia(media) {
+        elements.media.innerHTML = media.type === 'video'
+            ? `<video controls class="media-preview active"><source src="${media.url}" type="video/mp4"></video>`
+            : `<img src="${media.url}" class="media-preview active" loading="eager">`;
+
+        elements.download.href = media.url;
+        elements.download.download = `instagram_${media.type}_${Date.now()}.${media.type === 'video' ? 'mp4' : 'jpg'}`;
+        elements.download.textContent = `Download ${media.type.toUpperCase()}`;
+        elements.download.style.display = 'inline-block';
+    }
+
+    function showLoading() {
+        elements.status.style.display = 'flex';
+    }
+
+    function hideLoading() {
+        elements.status.style.display = 'none';
+    }
+
+    function showError(message) {
+        elements.error.textContent = message;
+        elements.error.style.display = 'block';
+    }
+
+    function resetUI() {
+        elements.error.style.display = 'none';
+        elements.media.innerHTML = '';
+        elements.download.style.display = 'none';
+    }
+
+    function disableButton(state) {
+        elements.btn.disabled = state;
+    }
+
+    function isValidUrl(url) {
+        return /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[\w\-]+/i.test(url);
+    }
+
+    function cleanUrlParams(url) {
+        return url.split(/[?#]/)[0];
+    }
+
+    elements.btn.addEventListener('click', handleDownload);
+    elements.url.addEventListener('keypress', e => e.key === 'Enter' && handleDownload());
+</script>
+
+</body>
+</html>
