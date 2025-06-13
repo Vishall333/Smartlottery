@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - Smart Lottery System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4a6bff;
+      --secondary: #f8f9fa;
+      --success: #28a745;
+      --danger: #dc3545;
+      --light: #f8f9fa;
+      --dark: #343a40;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .register-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 450px;
+      overflow: hidden;
+    }
+    
+    .register-header {
+      background: var(--primary);
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+    
+    .register-header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    
+    .register-header p {
+      opacity: 0.9;
+    }
+    
+    .register-form {
+      padding: 30px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .input-with-icon {
+      position: relative;
+    }
+    
+    .input-with-icon i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #777;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 12px 15px 12px 45px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.2);
+      outline: none;
+    }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #3a5bd9;
+    }
+    
+    .btn-google {
+      background: white;
+      color: #555;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    .btn-google:hover {
+      background: #f8f9fa;
+    }
+    
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #777;
+      font-size: 14px;
+    }
+    
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .divider::before {
+      margin-right: 15px;
+    }
+    
+    .divider::after {
+      margin-left: 15px;
+    }
+    
+    .register-footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+    
+    .register-footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .register-footer a:hover {
+      text-decoration: underline;
+    }
+    
+    .error-message {
+      color: var(--danger);
+      background: #f8d7da;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .password-strength {
+      height: 4px;
+      background: #eee;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    
+    .strength-meter {
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s, background 0.3s;
+    }
+    
+    @media (max-width: 480px) {
+      .register-header {
+        padding: 20px;
+      }
+      
+      .register-header h1 {
+        font-size: 24px;
+      }
+      
+      .register-form {
+        padding: 20px;
+      }
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script>
+    // Replace with your actual Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    // Google Auth Provider
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+  </script>
+</head>
+<body>
+  <div class="register-container">
+    <div class="register-header">
+      <h1><i class="fas fa-ticket-alt"></i> Smart Lottery</h1>
+      <p>Create your account to get started</p>
+    </div>
+    
+    <div class="error-message" id="errorMessage"></div>
+    
+    <div class="register-form">
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <div class="input-with-icon">
+            <i class="fas fa-user"></i>
+            <input type="text" id="name" class="form-control" placeholder="Enter your full name" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <div class="input-with-icon">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-with-icon">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="password" class="form-control" placeholder="Create a password" required>
+          </div>
+          <div class="password-strength">
+            <div class="strength-meter" id="strengthMeter"></div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <div class="input-with-icon">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="confirmPassword" class="form-control" placeholder="Confirm your password" required>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-user-plus"></i> Create Account
+        </button>
+        
+        <div class="divider">OR</div>
+        
+        <button type="button" class="btn btn-google" id="googleRegisterBtn">
+          <i class="fab fa-google"></i> Continue with Google
+        </button>
+      </form>
+      
+      <div class="register-footer">
+        Already have an account? <a href="login.html">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const registerForm = document.getElementById('registerForm');
+      const googleRegisterBtn = document.getElementById('googleRegisterBtn');
+      const errorMessage = document.getElementById('errorMessage');
+      const passwordInput = document.getElementById('password');
+      const strengthMeter = document.getElementById('strengthMeter');
+      const confirmPasswordInput = document.getElementById('confirmPassword');
+      
+      // Check password strength
+      passwordInput.addEventListener('input', () => {
+        const password = passwordInput.value;
+        let strength = 0;
+        
+        // Length check
+        if (password.length >= 8) strength += 25;
+        if (password.length >= 12) strength += 25;
+        
+        // Complexity checks
+        if (/[A-Z]/.test(password)) strength += 15;
+        if (/[0-9]/.test(password)) strength += 15;
+        if (/[^A-Za-z0-9]/.test(password)) strength += 20;
+        
+        // Update meter
+        strengthMeter.style.width = `${strength}%`;
+        
+        // Update color
+        if (strength < 50) {
+          strengthMeter.style.background = '#dc3545'; // Red
+        } else if (strength < 75) {
+          strengthMeter.style.background = '#ffc107'; // Yellow
+        } else {
+          strengthMeter.style.background = '#28a745'; // Green
+        }
+      });
+      
+      // Form submission
+      registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        // Validate passwords match
+        if (password !== confirmPassword) {
+          showError("Passwords don't match");
+          return;
+        }
+        
+        // Validate password strength
+        if (password.length < 8) {
+          showError("Password must be at least 8 characters");
+          return;
+        }
+        
+        try {
+          // Create user with email and password
+          const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+          
+          // Update user profile with display name
+          await userCredential.user.updateProfile({
+            displayName: name
+          });
+          
+          // Create user document in Firestore
+          await db.collection('users').doc(userCredential.user.uid).set({
+            name: name,
+            email: email,
+            balance: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          
+          // Redirect to main page
+          window.location.href = 'index.html';
+        } catch (error) {
+          showError(error.message);
+        }
+      });
+      
+      // Google registration
+      googleRegisterBtn.addEventListener('click', async () => {
+        try {
+          const result = await auth.signInWithPopup(googleProvider);
+          const user = result.user;
+          
+          // Check if user is new
+          if (result.additionalUserInfo.isNewUser) {
+            // Create user document in Firestore
+            await db.collection('users').doc(user.uid).set({
+              name: user.displayName,
+              email: user.email,
+              balance: 0,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+          
+          // Redirect to main page
+          window.location.href = 'index.html';
+        } catch (error) {
+          showError(error.message);
+        }
+      });
+      
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        setTimeout(() => {
+          errorMessage.style.display = 'none';
+        }, 5000);
+      }
+    });
+  </script>
+</body>
+</html>
