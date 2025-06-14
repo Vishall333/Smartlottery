@@ -497,20 +497,40 @@
     </div>
     
     <!-- Login Form (shown when not authenticated) -->
-    <div id="login-form">
-        <h2>Welcome to Smart Lottery</h2>
-        <div class="form-group">
-            <label for="login-email">Email Address</label>
-            <input type="email" id="login-email" class="form-control" placeholder="Enter your email">
+   <div id="auth-container">
+        <div id="login-form" class="auth-form active">
+            <h2>Welcome to Smart Lottery</h2>
+            <div class="form-group">
+                <input type="email" id="login-email" class="form-control" placeholder="Email Address">
+            </div>
+            <div class="form-group">
+                <input type="password" id="login-password" class="form-control" placeholder="Password">
+            </div>
+            <button id="loginBtn" class="auth-btn">Login</button>
+            <p class="auth-toggle">Don't have an account? <span id="show-signup">Sign up</span></p>
+            <p id="login-error" class="error-message"></p>
         </div>
-        <div class="form-group">
-            <label for="login-password">Password</label>
-            <input type="password" id="login-password" class="form-control" placeholder="Enter your password">
-        </div>
-        <button id="loginBtn" class="login-btn">Login</button>
-        <p id="login-error" class="error-message"></p>
-    </div>
 
+        <div id="signup-form" class="auth-form">
+            <h2>Create Account</h2>
+            <div class="form-group">
+                <input type="text" id="signup-name" class="form-control" placeholder="Full Name">
+            </div>
+            <div class="form-group">
+                <input type="email" id="signup-email" class="form-control" placeholder="Email Address">
+            </div>
+            <div class="form-group">
+                <input type="password" id="signup-password" class="form-control" placeholder="Password (min 6 characters)">
+            </div>
+            <div class="form-group">
+                <input type="password" id="signup-confirm" class="form-control" placeholder="Confirm Password">
+            </div>
+            <button id="signupBtn" class="auth-btn">Create Account</button>
+            <p class="auth-toggle">Already have an account? <span id="show-login">Login</span></p>
+            <p id="signup-error" class="error-message"></p>
+        </div>
+    </div>
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
@@ -520,13 +540,12 @@
         // Firebase config (REPLACE WITH YOUR CONFIG)
         const firebaseConfig = {
             apiKey: "AIzaSyBXeD8SMXHnqhNDg01Rlm4fC1t05Eb4NFs",
-      authDomain: "smart-lottery-b08c5.firebaseapp.com",
-      projectId: "smart-lottery-b08c5",
-      storageBucket: "smart-lottery-b08c5.appbasestorage.app",
-      messagingSenderId: "1038545058004",
-      appId: "1:1038545058004:web:65b29c57eda2939f18e341",
-      measurementId: "G-SH9Y19ZE74"
-        };
+            authDomain: "smart-lottery-b08c5.firebaseapp.com",
+            projectId: "smart-lottery-b08c5",
+            storageBucket: "smart-lottery-b08c5.appbasestorage.app",
+            messagingSenderId: "1038545058004",
+            appId: "1:1038545058004:web:65b29c57eda2939f18e341",
+            measurementId: "G-SH9Y19ZE74"        };
 
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
@@ -554,6 +573,67 @@
         // State
         let currentUser = null;
 
+        function initAuth() {
+            // Toggle between login/signup forms
+            document.getElementById('show-signup').addEventListener('click', () => {
+                document.getElementById('login-form').classList.remove('active');
+                document.getElementById('signup-form').classList.add('active');
+            });
+            
+            document.getElementById('show-login').addEventListener('click', () => {
+                document.getElementById('signup-form').classList.remove('active');
+                document.getElementById('login-form').classList.add('active');
+            });
+
+            // Signup handler
+            document.getElementById('signupBtn').addEventListener('click', () => {
+                const name = document.getElementById('signup-name').value;
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                const confirm = document.getElementById('signup-confirm').value;
+                const errorEl = document.getElementById('signup-error');
+
+                // Validation
+                if (!name || !email || !password || !confirm) {
+                    errorEl.textContent = 'All fields are required';
+                    return;
+                }
+                
+                if (password !== confirm) {
+                    errorEl.textContent = 'Passwords do not match';
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    errorEl.textContent = 'Password must be at least 6 characters';
+                    return;
+                }
+
+                // Create user
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        // Add user data to Firestore
+                        return db.collection('users').doc(userCredential.user.uid).set({
+                            name: name,
+                            email: email,
+                            balance: 0,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    })
+                    .then(() => {
+                        // Clear form and errors
+                        document.getElementById('signup-form').reset();
+                        errorEl.textContent = '';
+                        alert('Account created successfully! Please login.');
+                        document.getElementById('signup-form').classList.remove('active');
+                        document.getElementById('login-form').classList.add('active');
+                    })
+                    .catch((error) => {
+                        console.error("Signup error:", error);
+                        errorEl.textContent = error.message;
+                    });
+            });    
+            
         // Initialize the app
         function initApp() {
             auth.onAuthStateChanged(user => {
@@ -800,7 +880,8 @@
         };
 
         // Initialize the app
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            initAuth();    </script>
 </body>
 </html>
