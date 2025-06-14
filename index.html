@@ -297,7 +297,109 @@
             margin-top: 15px;
             text-align: center;
         }
-        
+    
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(108, 99, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-btn:hover {
+            background: #5a52e0;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(108, 99, 255, 0.3);
+        }
+
+        .auth-btn:active {
+            transform: translateY(0);
+        }
+
+        .auth-btn::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .auth-btn:focus:not(:active)::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(20, 20);
+                opacity: 0;
+            }
+        }
+
+        /* Enhanced Amount Buttons */
+        .amount-btn {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .amount-btn:hover {
+            background: rgba(108, 99, 255, 0.1);
+        }
+
+        .amount-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Contest Card Fixes */
+        .contest-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .contest-body {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .contest-footer {
+            margin-top: auto;
+            padding-top: 15px;
+        }
+       
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -309,7 +411,7 @@
     <div id="auth-container" class="auth-container">
         <div class="auth-header">
             <h1>Welcome to Smart Lottery</h1>
-            <p>Play and win exciting prizes!</p>
+            <p>Come and Test your luck!!</p>
         </div>
         
         <!-- Login Form -->
@@ -571,11 +673,21 @@
                 .get()
                 .then(querySnapshot => {
                     contestsContainer.innerHTML = '';
-                    let contestNumber = 1;
                     
+                    if (querySnapshot.empty) {
+                        contestsContainer.innerHTML = `
+                            <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                                <h3>No active contests available</h3>
+                                <p>Check back later for new contests</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let contestNumber = 1;
                     querySnapshot.forEach(doc => {
                         const contest = doc.data();
-                        const endTime = contest.endTime?.toDate().toLocaleString() || 'Soon';
+                        const endTime = contest.endTime?.toDate() || new Date();
                         
                         const contestCard = document.createElement('div');
                         contestCard.className = 'contest-card';
@@ -584,21 +696,23 @@
                                 <div class="contest-number">${contestNumber++}</div>
                                 <h3 class="contest-title">${contest.name}</h3>
                             </div>
-                            <div style="padding: 15px;">
-                                <div class="contest-prize">${contest.prize}</div>
+                            <div class="contest-body">
+                                <div class="contest-prize">${contest.prize.toLocaleString('en-IN')}</div>
                                 <div class="contest-details">
                                     <div>
                                         <div class="contest-detail-label">Ends</div>
-                                        <div>${endTime}</div>
+                                        <div>${endTime.toLocaleDateString()} at ${endTime.toLocaleTimeString()}</div>
                                     </div>
                                     <div>
                                         <div class="contest-detail-label">Entry Fee</div>
                                         <div>₹${contest.entryFee || 10}</div>
                                     </div>
                                 </div>
-                                <button class="btn-enter" data-id="${doc.id}" data-fee="${contest.entryFee || 10}">
-                                    Enter Contest
-                                </button>
+                                <div class="contest-footer">
+                                    <button class="btn-enter" data-id="${doc.id}" data-fee="${contest.entryFee || 10}">
+                                        Enter Contest
+                                    </button>
+                                </div>
                             </div>
                         `;
                         contestsContainer.appendChild(contestCard);
@@ -612,6 +726,15 @@
                             enterContest(contestId, entryFee);
                         });
                     });
+                })
+                .catch(error => {
+                    console.error("Error loading contests:", error);
+                    contestsContainer.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--error);">
+                            <h3>Error loading contests</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
                 });
         }
 
