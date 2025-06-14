@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Lottery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        :root {
+            --primary: #6c63ff;
+            --secondary: #ff6584;
+            --dark: #2d3748;
+            --light: #f7fafc;
+            --success: #48bb78;
+            --error: #e74c3c;
+            --gold: #ffd700;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        /* Auth Styles */
+        .auth-container {
+            max-width: 450px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .auth-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .auth-form {
+            padding: 30px;
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        /* App Styles */
+        .app-container {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 15px 0;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .user-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .balance {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        
+        .balance-amount {
+            font-weight: 700;
+            color: white;
+        }
+        
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 20px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+        
+        .nav-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            text-align: center;
+            flex: 1;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-tab.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .nav-tab.active:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20%;
+            width: 60%;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .page-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .page-content.active {
+            display: block;
+        }
+        
+        .contest-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .contest-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .contest-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .contest-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 15px;
+            position: relative;
+        }
+        
+        .contest-number {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        
+        .contest-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .contest-prize {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+        
+        .contest-prize:before {
+            content: '₹';
+        }
+        
+        .contest-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .contest-detail-label {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .btn-enter {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .winner-badge {
+            background: var(--gold);
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: inline-block;
+            margin: 3px;
+        }
+        
+        .winner-card .contest-header {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        
+        .error-message {
+            color: var(--error);
+            font-size: 14px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Container -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-header">
+            <h1>Welcome to Smart Lottery</h1>
+            <p>Play and win exciting prizes!</p>
+        </div>
+        
+        <!-- Login Form -->
+        <div id="login-form" class="auth-form active">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="login-email" class="form-control" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" class="form-control" placeholder="Enter your password">
+                <div style="text-align: right; margin-top: 5px;">
+                    <a href="#" id="forgot-password-link" style="color: var(--primary); font-size: 13px;">Forgot password?</a>
+                </div>
+            </div>
+            <button id="loginBtn" class="auth-btn">Login</button>
+            <p style="text-align: center; margin-top: 20px;">
+                Don't have an account? <a href="#" id="show-signup" style="color: var(--primary);">Sign up</a>
+            </p>
+            <p id="login-error" class="error-message"></p>
+        </div>
+        
+        <!-- Signup Form -->
+        <div id="signup-form" class="auth-form">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="signup-name" class="form-control" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="signup-email" class="form-control" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password (min 6 characters)</label>
+                <input type="password" id="signup-password" class="form-control" placeholder="Create a password">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="signup-confirm" class="form-control" placeholder="Confirm your password">
+            </div>
+            <button id="signupBtn" class="auth-btn">Create Account</button>
+            <p style="text-align: center; margin-top: 20px;">
+                Already have an account? <a href="#" id="show-login" style="color: var(--primary);">Login</a>
+            </p>
+            <p id="signup-error" class="error-message"></p>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" class="app-container">
+        <header>
+            <div class="header-content">
+                <div class="logo">Smart Lottery</div>
+                <div class="user-controls">
+                    <div class="balance">
+                        Balance: <span class="balance-amount">₹0</span>
+                    </div>
+                    <button id="addFundsBtn" class="btn btn-primary">Add Funds</button>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="container">
+            <div class="nav-tabs">
+                <div class="nav-tab active" data-page="contests">Current Contests</div>
+                <div class="nav-tab" data-page="winners">Past Winners</div>
+            </div>
+            
+            <div id="contests-page" class="page-content active">
+                <div class="contest-grid" id="contests-container">
+                    <!-- Contest cards will be inserted here -->
+                </div>
+            </div>
+            
+            <div id="winners-page" class="page-content">
+                <div class="contest-grid" id="winners-container">
+                    <!-- Winner cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="reset-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px;">Reset Password</h2>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="reset-email" class="form-control" placeholder="Enter your email">
+            </div>
+            <button id="reset-btn" class="auth-btn">Send Reset Link</button>
+            <p id="reset-message" class="error-message" style="margin-top: 15px;"></p>
+        </div>
+    </div>
+    
+    <div id="payment-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px;">Add Money to Wallet</h2>
+            <div class="form-group">
+                <label>Select Amount (₹)</label>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="amount-btn" data-amount="100">100</button>
+                    <button class="amount-btn" data-amount="500">500</button>
+                    <button class="amount-btn" data-amount="1000">1000</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Or Enter Custom Amount</label>
+                <input type="number" id="custom-amount" class="form-control" placeholder="Enter amount in ₹">
+            </div>
+            <button id="proceed-payment" class="auth-btn">Proceed to Pay</button>
+            <p style="text-align: center; margin-top: 15px; color: #666; font-size: 13px;">
+                Secure payments via Razorpay
+            </p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase Configuration (Replace with your config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXeD8SMXHnqhNDg01Rlm4fC1t05Eb4NFs",
+            authDomain: "smart-lottery-b08c5.firebaseapp.com",
+            projectId: "smart-lottery-b08c5",
+            storageBucket: "smart-lottery-b08c5.appbasestorage.app",
+            messagingSenderId: "1038545058004",
+            appId: "1:1038545058004:web:65b29c57eda2939f18e341",
+            measurementId: "G-SH9Y19ZE74"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const loginBtn = document.getElementById('loginBtn');
+        const signupBtn = document.getElementById('signupBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const addFundsBtn = document.getElementById('addFundsBtn');
+        const balanceAmount = document.querySelector('.balance-amount');
+        const contestsContainer = document.getElementById('contests-container');
+        const winnersContainer = document.getElementById('winners-container');
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const pages = document.querySelectorAll('.page-content');
+
+        // Auth Functions
+        function initAuth() {
+            // Toggle between login/signup
+            document.getElementById('show-signup').addEventListener('click', (e) => {
+                e.preventDefault();
+                loginForm.classList.remove('active');
+                signupForm.classList.add('active');
+            });
+            
+            document.getElementById('show-login').addEventListener('click', (e) => {
+                e.preventDefault();
+                signupForm.classList.remove('active');
+                loginForm.classList.add('active');
+            });
+
+            // Login
+            loginBtn.addEventListener('click', () => {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                
+                if (!email || !password) {
+                    document.getElementById('login-error').textContent = 'Please enter both email and password';
+                    return;
+                }
+                
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(() => {
+                        // Success - handled by auth state listener
+                    })
+                    .catch(error => {
+                        document.getElementById('login-error').textContent = error.message;
+                    });
+            });
+
+            // Signup
+            signupBtn.addEventListener('click', () => {
+                const name = document.getElementById('signup-name').value;
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                const confirm = document.getElementById('signup-confirm').value;
+                
+                if (!name || !email || !password || !confirm) {
+                    document.getElementById('signup-error').textContent = 'All fields are required';
+                    return;
+                }
+                
+                if (password !== confirm) {
+                    document.getElementById('signup-error').textContent = 'Passwords do not match';
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    document.getElementById('signup-error').textContent = 'Password must be at least 6 characters';
+                    return;
+                }
+
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        return db.collection('users').doc(userCredential.user.uid).set({
+                            name: name,
+                            email: email,
+                            balance: 100, // Starting bonus
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    })
+                    .catch(error => {
+                        document.getElementById('signup-error').textContent = error.message;
+                    });
+            });
+
+            // Password Reset
+            document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('reset-modal').style.display = 'flex';
+                document.getElementById('reset-email').value = document.getElementById('login-email').value;
+            });
+
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                const email = document.getElementById('reset-email').value;
+                
+                if (!email) {
+                    document.getElementById('reset-message').textContent = 'Please enter your email';
+                    return;
+                }
+                
+                auth.sendPasswordResetEmail(email)
+                    .then(() => {
+                        document.getElementById('reset-message').textContent = 'Password reset link sent!';
+                        setTimeout(() => {
+                            document.getElementById('reset-modal').style.display = 'none';
+                        }, 2000);
+                    })
+                    .catch(error => {
+                        document.getElementById('reset-message').textContent = error.message;
+                    });
+            });
+        }
+
+        // App Functions
+        function loadContests() {
+            db.collection('contests')
+                .where('status', '==', 'active')
+                .orderBy('endTime', 'asc')
+                .get()
+                .then(querySnapshot => {
+                    contestsContainer.innerHTML = '';
+                    let contestNumber = 1;
+                    
+                    querySnapshot.forEach(doc => {
+                        const contest = doc.data();
+                        const endTime = contest.endTime?.toDate().toLocaleString() || 'Soon';
+                        
+                        const contestCard = document.createElement('div');
+                        contestCard.className = 'contest-card';
+                        contestCard.innerHTML = `
+                            <div class="contest-header">
+                                <div class="contest-number">${contestNumber++}</div>
+                                <h3 class="contest-title">${contest.name}</h3>
+                            </div>
+                            <div style="padding: 15px;">
+                                <div class="contest-prize">${contest.prize}</div>
+                                <div class="contest-details">
+                                    <div>
+                                        <div class="contest-detail-label">Ends</div>
+                                        <div>${endTime}</div>
+                                    </div>
+                                    <div>
+                                        <div class="contest-detail-label">Entry Fee</div>
+                                        <div>₹${contest.entryFee || 10}</div>
+                                    </div>
+                                </div>
+                                <button class="btn-enter" data-id="${doc.id}" data-fee="${contest.entryFee || 10}">
+                                    Enter Contest
+                                </button>
+                            </div>
+                        `;
+                        contestsContainer.appendChild(contestCard);
+                    });
+                    
+                    // Add event listeners to entry buttons
+                    document.querySelectorAll('.btn-enter').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const contestId = this.getAttribute('data-id');
+                            const entryFee = parseInt(this.getAttribute('data-fee'));
+                            enterContest(contestId, entryFee);
+                        });
+                    });
+                });
+        }
+
+        function loadWinners() {
+            db.collection('contests')
+                .where('status', '==', 'completed')
+                .orderBy('endTime', 'desc')
+                .limit(10)
+                .get()
+                .then(querySnapshot => {
+                    winnersContainer.innerHTML = '';
+                    let winnerNumber = querySnapshot.size;
+                    
+                    querySnapshot.forEach(doc => {
+                        const contest = doc.data();
+                        const winners = contest.winners || [];
+                        
+                        const winnerCard = document.createElement('div');
+                        winnerCard.className = 'contest-card winner-card';
+                        winnerCard.innerHTML = `
+                            <div class="contest-header">
+                                <div class="contest-number">#${winnerNumber--}</div>
+                                <h3 class="contest-title">${contest.name}</h3>
+                            </div>
+                            <div style="padding: 15px;">
+                                <div class="contest-prize">${contest.prize}</div>
+                                <div style="margin-top: 15px;">
+                                    <strong>Winners:</strong>
+                                    <div style="margin-top: 8px;">
+                                        ${winners.length > 0 ? 
+                                            winners.map(winner => 
+                                                `<span class="winner-badge">${winner.name || 'Anonymous'}</span>`
+                                            ).join(' ') : 
+                                            '<span>Not announced</span>'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        winnersContainer.appendChild(winnerCard);
+                    });
+                });
+        }
+
+        function enterContest(contestId, entryFee) {
+            if (!auth.currentUser) return;
+            
+            // Check balance
+            db.collection('users').doc(auth.currentUser.uid).get()
+                .then(doc => {
+                    const balance = doc.data().balance || 0;
+                    
+                    if (balance >= entryFee) {
+                        // Deduct balance
+                        return db.collection('users').doc(auth.currentUser.uid).update({
+                            balance: firebase.firestore.FieldValue.increment(-entryFee)
+                        });
+                    } else {
+                        throw new Error('Insufficient balance');
+                    }
+                })
+                .then(() => {
+                    // Add contest entry
+                    return db.collection('contestEntries').add({
+                        userId: auth.currentUser.uid,
+                        contestId: contestId,
+                        entryDate: firebase.firestore.FieldValue.serverTimestamp(),
+                        ticketNumber: Math.floor(100000 + Math.random() * 900000) // 6-digit ticket
+                    });
+                })
+                .then(() => {
+                    alert('Successfully entered contest!');
+                })
+                .catch(error => {
+                    alert(error.message);
+                    if (error.message.includes('balance')) {
+                        document.getElementById('payment-modal').style.display = 'flex';
+                    }
+                });
+        }
+
+        function initPaymentSystem() {
+            // Amount selection
+            document.querySelectorAll('.amount-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById('custom-amount').value = '';
+                });
+            });
+            
+            // Custom amount input
+            document.getElementById('custom-amount').addEventListener('input', function() {
+                document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+            });
+            
+            // Proceed to payment
+            document.getElementById('proceed-payment').addEventListener('click', function() {
+                let amount = 0;
+                const activeBtn = document.querySelector('.amount-btn.active');
+                
+                if (activeBtn) {
+                    amount = parseInt(activeBtn.getAttribute('data-amount'));
+                } else if (document.getElementById('custom-amount').value) {
+                    amount = parseInt(document.getElementById('custom-amount').value);
+                }
+                
+                if (!amount || amount < 10) {
+                    alert('Please enter a valid amount (minimum ₹10)');
+                    return;
+                }
+                
+                // In a real app, you would call your backend to create a Razorpay order
+                // This is a simplified version
+                const options = {
+                    key: 'rzp_test_YOUR_RAZORPAY_KEY', // Replace with your key
+                    amount: amount * 100, // Razorpay uses paise
+                    currency: 'INR',
+                    name: 'Smart Lottery',
+                    description: 'Add Money to Wallet',
+                    handler: function(response) {
+                        // Update balance
+                        db.collection('users').doc(auth.currentUser.uid).update({
+                            balance: firebase.firestore.FieldValue.increment(amount)
+                        }).then(() => {
+                            alert(`₹${amount} added to your wallet!`);
+                            document.getElementById('payment-modal').style.display = 'none';
+                        });
+                    },
+                    theme: {
+                        color: '#6c63ff'
+                    }
+                };
+                
+                const rzp = new Razorpay(options);
+                rzp.open();
+            });
+        }
+
+        // Tab Navigation
+        navTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                navTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                pages.forEach(page => page.classList.remove('active'));
+                document.getElementById(`${tab.dataset.page}-page`).classList.add('active');
+            });
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // Close modals
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
+                }
+            });
+        });
+
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.modal').style.display = 'none';
+            });
+        });
+
+        // Auth State Listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is logged in
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                
+                // Load user balance
+                db.collection('users').doc(user.uid).onSnapshot(doc => {
+                    if (doc.exists) {
+                        balanceAmount.textContent = `₹${doc.data().balance || 0}`;
+                    }
+                });
+                
+                // Load data
+                loadContests();
+                loadWinners();
+            } else {
+                // User is logged out
+                authContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initAuth();
+            initPaymentSystem();
+            
+            // Show payment modal when Add Funds clicked
+            addFundsBtn.addEventListener('click', () => {
+                document.getElementById('payment-modal').style.display = 'flex';
+            });
+        });
+    </script>
+</body>
+</html>
