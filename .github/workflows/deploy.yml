@@ -8,4 +8,4 @@ jobs:
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: your-project-id  # Replace with yours!
+          projectId: smart-lottery-1a857  # Replace with yours!
