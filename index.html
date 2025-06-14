@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Lottery System</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -689,26 +689,43 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
-
   <script type="module">
     // Import the functions you need from the SDKs you need
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-analytics.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
-    import { getFirestore, collection, doc, getDoc, setDoc, getDocs, query, where, orderBy, limit, addDoc } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
-    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-functions.js";
+    import { 
+      getAuth, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDoc, 
+      setDoc, 
+      getDocs, 
+      query, 
+      where, 
+      orderBy, 
+      limit,
+      updateDoc,
+      arrayUnion,
+      increment,
+      serverTimestamp,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
+    import { 
+      getFunctions, 
+      httpsCallable 
+    } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-functions.js";
 
     // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyDqL6fOLztsTDdJdl0RKupY4RfvHRUUUkg",
       authDomain: "smart-lottery-1a857.firebaseapp.com",
       projectId: "smart-lottery-1a857",
-      storageBucket: "smart-lottery-1a857.firebasestorage.app",
+      storageBucket: "smart-lottery-1a857.appspot.com",
       messagingSenderId: "496146630242",
       appId: "1:496146630242:web:f5f14b85a136915d26333b",
       measurementId: "G-XSQVTYHZZ6"
