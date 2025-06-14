@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Lottery</title>
+    <title>Smart Lottery Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         :root {
             --primary: #6c63ff;
             --secondary: #ff6584;
-            --dark: #2d3748;
-            --light: #f7fafc;
             --success: #48bb78;
             --error: #e74c3c;
             --gold: #ffd700;
+            --dark: #2d3748;
+            --light: #f7fafc;
         }
         
         * {
@@ -30,7 +30,6 @@
             line-height: 1.6;
         }
         
-        /* Auth Styles */
         .auth-container {
             max-width: 450px;
             margin: 50px auto;
@@ -57,7 +56,6 @@
             animation: fadeIn 0.5s ease;
         }
         
-        /* App Styles */
         .app-container {
             display: none;
             max-width: 1200px;
@@ -118,6 +116,12 @@
             color: var(--primary);
         }
         
+        .btn-success {
+            background: var(--success);
+            color: white;
+            margin-left: 10px;
+        }
+        
         .nav-tabs {
             display: flex;
             background: white;
@@ -164,98 +168,143 @@
         
         .contest-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
         }
         
         .contest-card {
             background: white;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
         
         .contest-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
         }
         
         .contest-header {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            padding: 15px;
+            padding: 20px;
             position: relative;
         }
         
-        .contest-number {
+        .contest-tag {
             position: absolute;
             top: 15px;
             right: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-        
-        .contest-title {
-            font-size: 18px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 600;
         }
         
-        .contest-prize {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--primary);
-            margin: 10px 0;
+        .contest-progress {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            margin: 15px 0 10px;
+            border-radius: 3px;
+            overflow: hidden;
         }
         
-        .contest-prize:before {
-            content: '₹';
+        .contest-progress-bar {
+            height: 100%;
+            background: white;
+            border-radius: 3px;
+        }
+        
+        .contest-body {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .contest-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .contest-prize {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 5px 0;
         }
         
         .contest-details {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 15px;
+            margin: 15px 0;
             font-size: 14px;
+        }
+        
+        .contest-detail {
+            text-align: center;
         }
         
         .contest-detail-label {
             color: #666;
             font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .contest-detail-value {
+            font-weight: 600;
+        }
+        
+        .contest-footer {
+            margin-top: auto;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .participants-count {
+            font-size: 14px;
+            color: #666;
         }
         
         .btn-enter {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
+            padding: 10px 20px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
         
-        .winner-badge {
-            background: var(--gold);
-            color: #000;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-weight: 600;
-            display: inline-block;
-            margin: 3px;
+        .btn-enter:hover {
+            background: #5a52e0;
         }
         
         .winner-card .contest-header {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
         }
         
-        /* Modal Styles */
+        .winner-badge {
+            background: var(--gold);
+            color: #000;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+            margin: 3px;
+            font-size: 12px;
+        }
+        
         .modal {
             display: none;
             position: fixed;
@@ -271,14 +320,13 @@
         
         .modal-content {
             background: white;
-            border-radius: 10px;
+            border-radius: 12px;
             width: 90%;
             max-width: 400px;
             padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
         
-        /* Form Styles */
         .form-group {
             margin-bottom: 20px;
         }
@@ -297,7 +345,7 @@
             margin-top: 15px;
             text-align: center;
         }
-    
+        
         .auth-btn {
             width: 100%;
             padding: 14px;
@@ -319,7 +367,6 @@
             box-shadow: 0 6px 12px rgba(108, 99, 255, 0.3);
         }
 
-        /* Enhanced Amount Buttons */
         .amount-btn {
             flex: 1;
             padding: 12px;
@@ -340,31 +387,20 @@
             background: var(--primary);
             color: white;
         }
-
-        /* Contest Card Fixes */
-        .contest-card {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
+        
+        .withdraw-form {
+            margin-top: 20px;
+        }
+        
+        .withdraw-input {
             display: flex;
-            flex-direction: column;
-            height: 100%;
+            gap: 10px;
         }
-
-        .contest-body {
-            padding: 15px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
+        
+        .withdraw-input input {
+            flex: 1;
         }
-
-        .contest-footer {
-            margin-top: auto;
-            padding-top: 15px;
-        }
-       
+        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -376,7 +412,7 @@
     <div id="auth-container" class="auth-container">
         <div class="auth-header">
             <h1>Welcome to Smart Lottery</h1>
-            <p>Come and Test your luck!!</p>
+            <p>Test your luck and win big!</p>
         </div>
         
         <!-- Login Form -->
@@ -435,6 +471,7 @@
                         Balance: <span class="balance-amount" id="user-balance">₹0</span>
                     </div>
                     <button id="addFundsBtn" class="btn btn-primary">Add Funds</button>
+                    <button id="withdrawBtn" class="btn btn-success">Withdraw</button>
                     <button id="logoutBtn" class="btn btn-secondary">Logout</button>
                 </div>
             </div>
@@ -494,6 +531,22 @@
             </p>
         </div>
     </div>
+    
+    <div id="withdraw-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px;">Withdraw Funds</h2>
+            <div class="form-group">
+                <label>Amount to Withdraw (₹)</label>
+                <input type="number" id="withdraw-amount" class="form-control" placeholder="Enter amount">
+            </div>
+            <div class="form-group">
+                <label>UPI ID or Bank Details</label>
+                <input type="text" id="withdraw-details" class="form-control" placeholder="Enter UPI ID or account details">
+            </div>
+            <button id="confirm-withdraw" class="auth-btn">Request Withdrawal</button>
+            <p id="withdraw-message" class="error-message" style="margin-top: 15px;"></p>
+        </div>
+    </div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
@@ -506,7 +559,7 @@
             apiKey: "AIzaSyBXeD8SMXHnqhNDg01Rlm4fC1t05Eb4NFs",
             authDomain: "smart-lottery-b08c5.firebaseapp.com",
             projectId: "smart-lottery-b08c5",
-            storageBucket: "smart-lottery-b08c5.appbasestorage.app",
+            storageBucket: "smart-lottery-b08c5.appspot.com",
             messagingSenderId: "1038545058004",
             appId: "1:1038545058004:web:65b29c57eda2939f18e341",
             measurementId: "G-SH9Y19ZE74"
@@ -526,16 +579,21 @@
         const signupBtn = document.getElementById('signupBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const addFundsBtn = document.getElementById('addFundsBtn');
+        const withdrawBtn = document.getElementById('withdrawBtn');
         const balanceAmount = document.getElementById('user-balance');
         const contestsContainer = document.getElementById('contests-container');
         const winnersContainer = document.getElementById('winners-container');
         const navTabs = document.querySelectorAll('.nav-tab');
         const pages = document.querySelectorAll('.page-content');
         const paymentModal = document.getElementById('payment-modal');
+        const withdrawModal = document.getElementById('withdraw-modal');
         const resetModal = document.getElementById('reset-modal');
         const amountBtns = document.querySelectorAll('.amount-btn');
         const customAmount = document.getElementById('custom-amount');
         const proceedPayment = document.getElementById('proceed-payment');
+        const withdrawAmount = document.getElementById('withdraw-amount');
+        const withdrawDetails = document.getElementById('withdraw-details');
+        const confirmWithdraw = document.getElementById('confirm-withdraw');
 
         // Current User Data
         let currentUser = null;
@@ -546,6 +604,7 @@
             setupAuth();
             setupUI();
             setupPayment();
+            setupWithdraw();
             checkAuthState();
         }
 
@@ -607,13 +666,14 @@
                 
                 auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => {
-                        // Create user document
+                        // Create user document with 0 balance
                         return db.collection('users').doc(userCredential.user.uid).set({
                             name: name,
                             email: email,
-                            balance: 100, // Starting balance
+                            balance: 0, // Starting with 0 balance
                             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                            withdrawals: []
                         });
                     })
                     .then(() => {
@@ -686,6 +746,11 @@
             addFundsBtn.addEventListener('click', () => {
                 paymentModal.style.display = 'flex';
             });
+            
+            // Withdraw button
+            withdrawBtn.addEventListener('click', () => {
+                withdrawModal.style.display = 'flex';
+            });
         }
 
         // Payment Setup
@@ -727,6 +792,51 @@
                 createRazorpayOrder(amount);
             });
         }
+        
+        // Withdraw Setup
+        function setupWithdraw() {
+            confirmWithdraw.addEventListener('click', async () => {
+                const amount = parseInt(withdrawAmount.value);
+                const details = withdrawDetails.value.trim();
+                
+                if (!amount || amount < 100) {
+                    document.getElementById('withdraw-message').textContent = 'Minimum withdrawal amount is ₹100';
+                    return;
+                }
+                
+                if (!details) {
+                    document.getElementById('withdraw-message').textContent = 'Please enter your UPI ID or bank details';
+                    return;
+                }
+                
+                if (amount > userData.balance) {
+                    document.getElementById('withdraw-message').textContent = 'Insufficient balance';
+                    return;
+                }
+                
+                try {
+                    // Record withdrawal request
+                    await db.collection('users').doc(currentUser.uid).update({
+                        balance: firebase.firestore.FieldValue.increment(-amount),
+                        withdrawals: firebase.firestore.FieldValue.arrayUnion({
+                            amount: amount,
+                            details: details,
+                            status: 'pending',
+                            requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        })
+                    });
+                    
+                    // Refresh data
+                    await loadUserData();
+                    withdrawModal.style.display = 'none';
+                    alert('Withdrawal request submitted successfully!');
+                    
+                } catch (error) {
+                    console.error('Withdrawal error:', error);
+                    document.getElementById('withdraw-message').textContent = error.message;
+                }
+            });
+        }
 
         // Check authentication state
         function checkAuthState() {
@@ -755,18 +865,19 @@
                 userData = userDoc.data();
                 balanceAmount.textContent = `₹${userData.balance}`;
             } else {
-                // Create user document if it doesn't exist
+                // Create user document if it doesn't exist (with 0 balance)
                 await db.collection('users').doc(currentUser.uid).set({
                     name: currentUser.displayName || 'User',
                     email: currentUser.email,
-                    balance: 100, // Starting balance
+                    balance: 0,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                    withdrawals: []
                 });
                 userData = {
-                    balance: 100
+                    balance: 0
                 };
-                balanceAmount.textContent = '₹100';
+                balanceAmount.textContent = '₹0';
             }
         }
 
@@ -797,31 +908,47 @@
                     // Get entry count
                     const entriesSnapshot = await db.collection(`contests/${contestDoc.id}/entries`).get();
                     const entryCount = entriesSnapshot.size;
+                    const progressPercent = Math.min(100, (entryCount / contest.maxParticipants) * 100);
                     
                     // Create contest card
                     const contestCard = document.createElement('div');
                     contestCard.className = 'contest-card';
                     contestCard.innerHTML = `
                         <div class="contest-header">
-                            <div class="contest-number">${contest.prize}₹</div>
+                            <div class="contest-tag">${contest.prize}₹ Prize</div>
                             <h3 class="contest-title">${contest.name}</h3>
+                            <div class="contest-progress">
+                                <div class="contest-progress-bar" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <div class="contest-details">
+                                <div class="contest-detail">
+                                    <div class="contest-detail-label">Entry Fee</div>
+                                    <div class="contest-detail-value">₹${contest.entryFee}</div>
+                                </div>
+                                <div class="contest-detail">
+                                    <div class="contest-detail-label">Ends In</div>
+                                    <div class="contest-detail-value">${formatTimeRemaining(contest.endTime.toDate())}</div>
+                                </div>
+                            </div>
                         </div>
                         <div class="contest-body">
+                            <div class="contest-prize">${contest.prize}₹</div>
                             <div class="contest-details">
-                                <div>
-                                    <div class="contest-detail-label">Entry Fee</div>
-                                    <div>₹${contest.entryFee}</div>
+                                <div class="contest-detail">
+                                    <div class="contest-detail-label">Max Participants</div>
+                                    <div class="contest-detail-value">${contest.maxParticipants}</div>
                                 </div>
-                                <div>
-                                    <div class="contest-detail-label">Participants</div>
-                                    <div>${entryCount}</div>
+                                <div class="contest-detail">
+                                    <div class="contest-detail-label">Current Entries</div>
+                                    <div class="contest-detail-value">${entryCount}/${contest.maxParticipants}</div>
                                 </div>
                             </div>
-                            <div class="contest-footer">
-                                <button class="btn-enter" data-contest-id="${contestDoc.id}" data-entry-fee="${contest.entryFee}">
-                                    Enter Contest (₹${contest.entryFee})
-                                </button>
-                            </div>
+                        </div>
+                        <div class="contest-footer">
+                            <div class="participants-count">${entryCount} participants</div>
+                            <button class="btn-enter" data-contest-id="${contestDoc.id}" data-entry-fee="${contest.entryFee}">
+                                Enter (₹${contest.entryFee})
+                            </button>
                         </div>
                     `;
                     
@@ -841,6 +968,22 @@
                 console.error('Error loading contests:', error);
                 contestsContainer.innerHTML = '<p class="error-message">Error loading contests. Please try again.</p>';
             }
+        }
+        
+        // Format time remaining
+        function formatTimeRemaining(endDate) {
+            const now = new Date();
+            const diff = endDate - now;
+            
+            if (diff <= 0) return "Ended";
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (days > 0) return `${days}d ${hours}h`;
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m`;
         }
 
         // Load winners
@@ -885,15 +1028,17 @@
                             <h3 class="contest-title">${contest.name}</h3>
                         </div>
                         <div class="contest-body">
-                            <div class="contest-prize">${contest.prize}</div>
+                            <div class="contest-prize">${contest.prize}₹</div>
                             <div class="contest-details">
-                                <div>
+                                <div class="contest-detail">
                                     <div class="contest-detail-label">Winner</div>
-                                    <div class="winner-badge">${winnerInfo}</div>
+                                    <div class="contest-detail-value">
+                                        <span class="winner-badge">${winnerInfo}</span>
+                                    </div>
                                 </div>
-                                <div>
+                                <div class="contest-detail">
                                     <div class="contest-detail-label">Ended</div>
-                                    <div>${contest.endTime.toDate().toLocaleDateString()}</div>
+                                    <div class="contest-detail-value">${contest.endTime.toDate().toLocaleDateString()}</div>
                                 </div>
                             </div>
                         </div>
@@ -909,63 +1054,53 @@
         }
 
         // Enter contest
-        // Add this function to update the user's balance display
-async function loadUserBalance() {
-  try {
-    const userDoc = await firebase.firestore()
-      .collection('users')
-      .doc(firebase.auth().currentUser.uid)
-      .get();
-    
-    if (userDoc.exists) {
-      const balance = userDoc.data().balance || 0;
-      document.getElementById('user-balance').textContent = `₹${balance}`;
-    }
-  } catch (error) {
-    console.error("Error loading balance:", error);
-  }
-}
+        async function enterContest(contestId, entryFee) {
+            if (!currentUser || !userData) return;
+            
+            if (userData.balance < entryFee) {
+                alert(`You don't have enough balance to enter this contest. Current balance: ₹${userData.balance}`);
+                return;
+            }
+            
+            try {
+                // Start transaction
+                await db.runTransaction(async (transaction) => {
+                    // 1. Verify balance again (in case it changed)
+                    const userRef = db.collection('users').doc(currentUser.uid);
+                    const userDoc = await transaction.get(userRef);
+                    const currentBalance = userDoc.data().balance;
+                    
+                    if (currentBalance < entryFee) {
+                        throw new Error('Insufficient balance');
+                    }
+                    
+                    // 2. Deduct balance
+                    transaction.update(userRef, {
+                        balance: firebase.firestore.FieldValue.increment(-entryFee)
+                    });
+                    
+                    // 3. Create contest entry
+                    const entryRef = db.collection(`contests/${contestId}/entries`).doc();
+                    transaction.set(entryRef, {
+                        userId: currentUser.uid,
+                        email: currentUser.email,
+                        ticketNumber: Math.floor(Math.random() * 10000) + 1,
+                        enteredAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        transactionId: `entry_${Date.now()}`
+                    });
+                });
+                
+                // Refresh data
+                await loadUserData();
+                loadContests();
+                alert('Successfully entered the contest! Good luck!');
+                
+            } catch (error) {
+                console.error('Error entering contest:', error);
+                alert(`Failed to enter contest: ${error.message}`);
+            }
+        }
 
-// Update your enterContest function to use it correctly
-async function enterContest(contestId, entryFee) {
-  try {
-    await firebase.firestore().runTransaction(async (transaction) => {
-      const userRef = firebase.firestore().doc(`users/${firebase.auth().currentUser.uid}`);
-      const userDoc = await transaction.get(userRef);
-      
-      if (!userDoc.exists || userDoc.data().balance < entryFee) {
-        throw new Error("Insufficient balance");
-      }
-      
-      transaction.update(userRef, {
-        balance: firebase.firestore.FieldValue.increment(-entryFee)
-      });
-      
-      const entryRef = firebase.firestore().collection(`contests/${contestId}/entries`).doc();
-      transaction.set(entryRef, {
-        userId: firebase.auth().currentUser.uid,
-        email: firebase.auth().currentUser.email,
-        ticketNumber: Math.floor(Math.random() * 10000) + 1,
-        enteredAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    });
-    
-    alert("Successfully entered contest!");
-    await loadUserBalance(); // Refresh balance display
-    loadContests(); // Refresh contest list
-  } catch (error) {
-    console.error("Contest entry failed:", error);
-    alert(`Failed to enter contest: ${error.message}`);
-  }
-}
-
-// Make sure to call loadUserBalance when the app loads
-firebase.auth().onAuthStateChanged((user) => {
-  if (user) {
-    loadUserBalance(); // Initialize balance display
-    loadContests();
-  }
-});
         // Create Razorpay order
         function createRazorpayOrder(amount) {
             // In a real app, you would call your backend to create an order
