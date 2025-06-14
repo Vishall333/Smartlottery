@@ -446,6 +446,64 @@
       display: none;
     }
     
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tab.active {
+      border-bottom-color: var(--primary);
+      color: var(--primary);
+      font-weight: bold;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Winners table */
+    .winners-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    
+    .winners-table th, .winners-table td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .winners-table th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+    
+    .winners-table tr:hover {
+      background-color: #f5f7ff;
+    }
+    
+    .winner-badge {
+      background-color: var(--success);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
     @media (max-width: 768px) {
       .contest-grid {
         grid-template-columns: 1fr;
@@ -463,14 +521,27 @@
       .payment-options {
         grid-template-columns: repeat(2, 1fr);
       }
+      
+      .tabs {
+        flex-direction: column;
+      }
+      
+      .tab {
+        border-bottom: none;
+        border-left: 3px solid transparent;
+      }
+      
+      .tab.active {
+        border-bottom-color: transparent;
+        border-left-color: var(--primary);
+      }
+      
+      .winners-table {
+        display: block;
+        overflow-x: auto;
+      }
     }
   </style>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
 </head>
 <body>
   <header>
@@ -493,15 +564,33 @@
       <button class="add-funds-btn" id="addFundsBtn"><i class="fas fa-plus-circle"></i> Add Funds</button>
     </div>
 
-    <div class="filter-bar">
-      <button class="filter-btn active" data-filter="all">All Contests</button>
-      <button class="filter-btn" data-filter="daily">Daily</button>
-      <button class="filter-btn" data-filter="3-day">3-Day</button>
-      <button class="filter-btn" data-filter="weekly">Weekly</button>
-      <button class="filter-btn" data-filter="monthly">Monthly</button>
+    <div class="tabs">
+      <div class="tab active" data-tab="contests">Contests</div>
+      <div class="tab" data-tab="winners">Winners</div>
+      <div class="tab" data-tab="history">History</div>
     </div>
 
-    <div id="lotteryContainer" class="contest-grid"></div>
+    <div class="tab-content active" id="contestsTab">
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">All Contests</button>
+        <button class="filter-btn" data-filter="daily">Daily</button>
+        <button class="filter-btn" data-filter="3-day">3-Day</button>
+        <button class="filter-btn" data-filter="weekly">Weekly</button>
+        <button class="filter-btn" data-filter="monthly">Monthly</button>
+      </div>
+
+      <div id="lotteryContainer" class="contest-grid"></div>
+    </div>
+
+    <div class="tab-content" id="winnersTab">
+      <h2>Past Winners</h2>
+      <div id="winnersContainer"></div>
+    </div>
+
+    <div class="tab-content" id="historyTab">
+      <h2>Your Transaction History</h2>
+      <div id="transactionHistory"></div>
+    </div>
   </div>
 
   <!-- Entry Confirmation Modal -->
@@ -600,39 +689,38 @@
     </div>
   </div>
 
-  <!-- Transaction History Modal -->
-  <div class="modal" id="historyModal">
-    <div class="modal-content">
-      <span class="close-modal" id="closeHistoryModal">&times;</span>
-      <h2>Transaction History</h2>
-      <div id="transactionHistory"></div>
-    </div>
-  </div>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
 
-  <script>
-    // Firebase configuration
+  <script type="module">
     // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-analytics.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, getDocs, query, where, orderBy, limit, addDoc } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-functions.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDqL6fOLztsTDdJdl0RKupY4RfvHRUUUkg",
-  authDomain: "smart-lottery-1a857.firebaseapp.com",
-  projectId: "smart-lottery-1a857",
-  storageBucket: "smart-lottery-1a857.firebasestorage.app",
-  messagingSenderId: "496146630242",
-  appId: "1:496146630242:web:f5f14b85a136915d26333b",
-  measurementId: "G-XSQVTYHZZ6"
-};
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDqL6fOLztsTDdJdl0RKupY4RfvHRUUUkg",
+      authDomain: "smart-lottery-1a857.firebaseapp.com",
+      projectId: "smart-lottery-1a857",
+      storageBucket: "smart-lottery-1a857.firebasestorage.app",
+      messagingSenderId: "496146630242",
+      appId: "1:496146630242:web:f5f14b85a136915d26333b",
+      measurementId: "G-XSQVTYHZZ6"
+    };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const functions = getFunctions(app);
+
     // Global variables
     let currentUser = null;
     let userBalance = 0;
@@ -648,6 +736,8 @@ const analytics = getAnalytics(app);
     const userBalanceEl = document.getElementById("userBalance");
     const addFundsBtn = document.getElementById("addFundsBtn");
     const filterBtns = document.querySelectorAll(".filter-btn");
+    const tabs = document.querySelectorAll(".tab");
+    const tabContents = document.querySelectorAll(".tab-content");
     
     // Modal elements
     const entryModal = document.getElementById("entryModal");
@@ -676,18 +766,18 @@ const analytics = getAnalytics(app);
     const paymentDoneBtn = document.getElementById("paymentDoneBtn");
     const retryPaymentBtn = document.getElementById("retryPaymentBtn");
     
-    const historyModal = document.getElementById("historyModal");
-    const closeHistoryModal = document.getElementById("closeHistoryModal");
+    const winnersContainer = document.getElementById("winnersContainer");
     const transactionHistory = document.getElementById("transactionHistory");
 
     // Initialize the app
     document.addEventListener('DOMContentLoaded', () => {
-      auth.onAuthStateChanged(user => {
+      onAuthStateChanged(auth, (user) => {
         if (user) {
           currentUser = user;
           updateUserInfo();
           loadUserBalance();
           loadContests();
+          loadWinners();
           loadTransactionHistory();
         } else {
           window.location.href = "login.html";
@@ -700,7 +790,7 @@ const analytics = getAnalytics(app);
     function setupEventListeners() {
       // Logout button
       logoutBtn.addEventListener('click', () => {
-        auth.signOut().then(() => {
+        signOut(auth).then(() => {
           window.location.href = "login.html";
         });
       });
@@ -711,6 +801,18 @@ const analytics = getAnalytics(app);
           filterBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           filterContests(btn.dataset.filter);
+        });
+      });
+      
+      // Tab switching
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          const tabId = tab.dataset.tab + 'Tab';
+          document.getElementById(tabId).classList.add('active');
         });
       });
       
@@ -730,10 +832,6 @@ const analytics = getAnalytics(app);
       
       closePaymentModal.addEventListener('click', () => {
         paymentModal.style.display = 'none';
-      });
-      
-      closeHistoryModal.addEventListener('click', () => {
-        historyModal.style.display = 'none';
       });
       
       // Payment method selection
@@ -787,9 +885,6 @@ const analytics = getAnalytics(app);
         if (event.target === paymentModal) {
           paymentModal.style.display = 'none';
         }
-        if (event.target === historyModal) {
-          historyModal.style.display = 'none';
-        }
       });
     }
 
@@ -807,13 +902,13 @@ const analytics = getAnalytics(app);
 
     async function loadUserBalance() {
       try {
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
-        if (userDoc.exists) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
           userBalance = userDoc.data().balance || 0;
           userBalanceEl.textContent = `₹${userBalance.toLocaleString()}`;
         } else {
           // Create user document if it doesn't exist
-          await db.collection('users').doc(currentUser.uid).set({
+          await setDoc(doc(db, 'users', currentUser.uid), {
             balance: 0,
             name: currentUser.displayName || 'User',
             email: currentUser.email
@@ -829,10 +924,12 @@ const analytics = getAnalytics(app);
 
     async function loadContests() {
       try {
-        const snapshot = await db.collection('contests')
-          .where('endTime', '>', new Date())
-          .orderBy('endTime')
-          .get();
+        const q = query(
+          collection(db, 'contests'),
+          where('endTime', '>', new Date()),
+          orderBy('endTime')
+        );
+        const snapshot = await getDocs(q);
         
         contests = [];
         lotteryContainer.innerHTML = '';
@@ -927,6 +1024,79 @@ const analytics = getAnalytics(app);
       }
     }
 
+    async function loadWinners() {
+      try {
+        const q = query(
+          collection(db, 'winners'),
+          orderBy('contestEndTime', 'desc'),
+          limit(20)
+        );
+        const snapshot = await getDocs(q);
+        
+        winnersContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+          winnersContainer.innerHTML = '<p>No winners found yet</p>';
+          return;
+        }
+        
+        // Group winners by contest
+        const contestsMap = new Map();
+        
+        snapshot.forEach(doc => {
+          const winner = doc.data();
+          if (!contestsMap.has(winner.contestId)) {
+            contestsMap.set(winner.contestId, {
+              name: winner.contestName,
+              endTime: winner.contestEndTime,
+              winners: []
+            });
+          }
+          contestsMap.get(winner.contestId).winners.push(winner);
+        });
+        
+        // Render each contest's winners
+        contestsMap.forEach((contest, contestId) => {
+          const contestEl = document.createElement('div');
+          contestEl.className = 'contest-winners';
+          contestEl.innerHTML = `
+            <h3>${contest.name} - ${contest.endTime.toDate().toLocaleDateString()}</h3>
+            <table class="winners-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Winner</th>
+                  <th>Prize</th>
+                </tr>
+              </thead>
+              <tbody id="winners-${contestId}"></tbody>
+            </table>
+          `;
+          
+          winnersContainer.appendChild(contestEl);
+          
+          const tbody = document.getElementById(`winners-${contestId}`);
+          
+          // Sort winners by rank
+          contest.winners.sort((a, b) => a.rank - b.rank);
+          
+          // Add each winner to the table
+          contest.winners.forEach(winner => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${winner.rank}</td>
+              <td>${winner.winnerName}</td>
+              <td>₹${winner.prizeAmount.toLocaleString()}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        });
+      } catch (error) {
+        console.error('Error loading winners:', error);
+        winnersContainer.innerHTML = '<p>Failed to load winners. Please try again.</p>';
+      }
+    }
+
     function showEntryModal(contest) {
       selectedContest = contest;
       contestNameModal.textContent = contest.name;
@@ -959,7 +1129,7 @@ const analytics = getAnalytics(app);
         }
         
         // Call cloud function to enter contest
-        const enterContestFn = functions.httpsCallable('enterContest');
+        const enterContestFn = httpsCallable(functions, 'enterContest');
         const result = await enterContestFn({
           contestId: selectedContest.id,
           entryFee: selectedContest.entryFee
@@ -1016,7 +1186,7 @@ const analytics = getAnalytics(app);
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Call cloud function to add funds
-        const addFundsFn = functions.httpsCallable('addFunds');
+        const addFundsFn = httpsCallable(functions, 'addFunds');
         const result = await addFundsFn({
           amount: amount,
           method: paymentMethod
@@ -1051,12 +1221,12 @@ const analytics = getAnalytics(app);
 
     async function loadTransactionHistory() {
       try {
-        const snapshot = await db.collection('users')
-          .doc(currentUser.uid)
-          .collection('transactions')
-          .orderBy('date', 'desc')
-          .limit(20)
-          .get();
+        const q = query(
+          collection(db, 'users', currentUser.uid, 'transactions'),
+          orderBy('date', 'desc'),
+          limit(20)
+        );
+        const snapshot = await getDocs(q);
         
         transactionHistory.innerHTML = '';
         
@@ -1089,7 +1259,7 @@ const analytics = getAnalytics(app);
         <div class="txn-status ${txn.status}">${txn.status}</div>
       `;
       
-      transactionHistory.prepend(txnEl);
+      transactionHistory.appendChild(txnEl);
     }
   </script>
 </body>
