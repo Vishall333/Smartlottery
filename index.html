@@ -1,0 +1,2144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Lottery Pro - India's Most Trusted Lottery Platform</title>
+    <meta name="description" content="Join India's most trusted lottery platform with secure payments, fair play, and instant prize distribution.">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK v9 -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Cashfree SDK -->
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #0052cc;
+            --primary-light: #1976d2;
+            --primary-dark: #003d99;
+            --secondary: #64748b;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --accent: #7c3aed;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --text-lighter: #94a3b8;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.2s ease-in-out;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        /* Header Styles */
+        .header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            margin-bottom: 40px;
+            border-radius: var(--radius-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stars" patternUnits="userSpaceOnUse" width="10" height="10"><circle cx="5" cy="5" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23stars)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(20px); }
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            font-weight: 400;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+        
+        .trust-badges {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .trust-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        /* User Section */
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            padding: 15px 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        
+        .user-details h3 {
+            margin: 0;
+            color: var(--text);
+            font-size: 1.1rem;
+        }
+        
+        .user-balance {
+            color: var(--success);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Tabs */
+        .tab-navigation {
+            display: flex;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 8px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            min-width: 120px;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Live Stats */
+        .live-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .live-stat {
+            background: var(--surface);
+            padding: 25px 20px;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        
+        .live-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .live-stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+        
+        .live-stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .live-stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-full {
+            width: 100%;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        /* Contest Cards */
+        .contest-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .contest-card {
+            padding: 25px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .contest-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+        
+        .contest-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .contest-title i {
+            color: var(--primary);
+        }
+        
+        .contest-prize {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .rupee-symbol {
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+        
+        .contest-details {
+            margin-bottom: 20px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .detail-label {
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .progress-bar {
+            background: rgba(0,0,0,0.1);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+            transition: width 0.3s ease;
+        }
+        
+        /* Prize Distribution */
+        .prize-distribution {
+            margin-bottom: 20px;
+        }
+        
+        .prize-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .prize-details {
+            margin-top: 15px;
+            display: none;
+            background: rgba(0, 82, 204, 0.05);
+            padding: 15px;
+            border-radius: var(--radius);
+        }
+        
+        .prize-details.show {
+            display: block;
+        }
+        
+        .prize-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 82, 204, 0.1);
+        }
+        
+        .prize-item:last-child {
+            border-bottom: none;
+        }
+        
+        .prize-position {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .prize-amount {
+            font-weight: 700;
+            color: var(--success);
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            background: var(--surface);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+        }
+        
+        .password-input-container {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 4px;
+        }
+        
+        .amount-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .amount-btn {
+            padding: 12px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .amount-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: var(--surface);
+            max-width: 500px;
+            margin: 50px auto;
+            border-radius: var(--radius-lg);
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-header {
+            padding: 25px 25px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: var(--text);
+            font-size: 1.4rem;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-light);
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+        
+        .modal-close:hover {
+            background: var(--border);
+        }
+        
+        .modal-body {
+            padding: 25px;
+        }
+        
+        /* Auth Forms */
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .auth-card {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .auth-header h2 {
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        
+        .auth-header p {
+            color: var(--text-light);
+        }
+        
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .auth-toggle a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 350px;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .notification.success {
+            background: var(--success);
+        }
+        
+        .notification.error {
+            background: var(--error);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Loading */
+        .loading-section {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Data Lists */
+        .data-list {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        .data-item {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .data-item-info {
+            flex: 1;
+        }
+        
+        .data-item-title {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        
+        .data-item-subtitle {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .data-item-value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .transaction-amount.positive {
+            color: var(--success);
+        }
+        
+        .transaction-amount.negative {
+            color: var(--error);
+        }
+        
+        /* Profile Section */
+        .profile-section {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .profile-stat {
+            text-align: center;
+            padding: 20px;
+            background: var(--background);
+            border-radius: var(--radius);
+        }
+        
+        .profile-stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .profile-stat-label {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 40px 15px;
+                margin-bottom: 25px;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .tagline {
+                font-size: 1rem;
+            }
+            
+            .user-header {
+                padding: 12px 15px;
+            }
+            
+            .user-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .contest-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .live-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .modal {
+                padding: 10px;
+            }
+            
+            .auth-card {
+                padding: 30px 25px;
+            }
+            
+            .amount-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .tab-navigation {
+                padding: 4px;
+            }
+            
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                min-width: 80px;
+            }
+        }
+        
+        /* Hide sections initially */
+        #authSection,
+        #userSection {
+            display: none;
+        }
+        
+        .payment-summary {
+            background: var(--background);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .summary-row:last-child {
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Landing Section -->
+    <div id="landingSection">
+        <div class="container">
+            <div class="header">
+                <div class="header-content">
+                    <h1 class="logo">Smart Lottery Pro</h1>
+                    <p class="tagline">India's Most Trusted Lottery Platform</p>
+                    <button class="btn btn-success" onclick="showAuth()" style="font-size: 1.1rem; padding: 15px 30px;">
+                        <i class="fas fa-rocket"></i> Join Now & Win Big
+                    </button>
+                    <div class="trust-badges">
+                        <div class="trust-badge">
+                            <i class="fas fa-shield-alt"></i> 100% Secure
+                        </div>
+                        <div class="trust-badge">
+                            <i class="fas fa-bolt"></i> Instant Payouts
+                        </div>
+                        <div class="trust-badge">
+                            <i class="fas fa-users"></i> 50,000+ Winners
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Live Stats -->
+            <div class="live-stats">
+                <div class="live-stat">
+                    <div class="live-stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="live-stat-value" id="totalUsers">45,287</div>
+                    <div class="live-stat-label">Active Players</div>
+                </div>
+                <div class="live-stat">
+                    <div class="live-stat-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="live-stat-value" id="totalPrizes">₹12.5L</div>
+                    <div class="live-stat-label">Prizes Distributed</div>
+                </div>
+                <div class="live-stat">
+                    <div class="live-stat-icon">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div class="live-stat-value" id="winnersToday">127</div>
+                    <div class="live-stat-label">Winners Today</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Section -->
+    <div id="authSection">
+        <div class="auth-container">
+            <div class="auth-card">
+                <!-- Login Form -->
+                <div id="loginForm">
+                    <div class="auth-header">
+                        <h2>Welcome Back</h2>
+                        <p>Sign in to continue your winning journey</p>
+                    </div>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-input" id="loginEmail" required placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <div class="password-input-container">
+                                <input type="password" class="form-input" id="loginPassword" required placeholder="Enter your password">
+                                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </button>
+                    </form>
+                    <div class="auth-toggle">
+                        Don't have an account? <a href="#" onclick="toggleAuthForm('signup')">Sign Up</a>
+                    </div>
+                </div>
+
+                <!-- Signup Form -->
+                <div id="signupForm" style="display: none;">
+                    <div class="auth-header">
+                        <h2>Join Smart Lottery</h2>
+                        <p>Create your account and start winning</p>
+                    </div>
+                    <form onsubmit="handleSignup(event)">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-input" id="signupName" required placeholder="Enter your full name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-input" id="signupEmail" required placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <div class="password-input-container">
+                                <input type="password" class="form-input" id="signupPassword" required placeholder="Create a strong password" minlength="6">
+                                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-user-plus"></i> Create Account
+                        </button>
+                    </form>
+                    <div class="auth-toggle">
+                        Already have an account? <a href="#" onclick="toggleAuthForm('login')">Sign In</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Section -->
+    <div id="userSection">
+        <div class="container">
+            <!-- User Header -->
+            <div class="user-header">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h3 id="userDisplayName">Smart Player</h3>
+                        <div class="user-balance">Balance: <span id="userBalance">₹0</span></div>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn btn-success" onclick="openModal('addMoneyModal')">
+                        <i class="fas fa-plus"></i> Add Money
+                    </button>
+                    <button class="btn btn-outline" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('contests')">
+                    <i class="fas fa-trophy"></i> Live Contests
+                </button>
+                <button class="tab-btn" onclick="switchTab('winners')">
+                    <i class="fas fa-crown"></i> Winners
+                </button>
+                <button class="tab-btn" onclick="switchTab('transactions')">
+                    <i class="fas fa-exchange-alt"></i> Transactions
+                </button>
+                <button class="tab-btn" onclick="switchTab('profile')">
+                    <i class="fas fa-user"></i> Profile
+                </button>
+                <button class="tab-btn" onclick="switchTab('withdrawal')">
+                    <i class="fas fa-money-bill-wave"></i> Withdraw
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div id="contestsTab" class="tab-content active">
+                <div class="contest-grid" id="contestGrid">
+                    <!-- Contest cards will be rendered here -->
+                </div>
+            </div>
+
+            <div id="winnersTab" class="tab-content">
+                <div id="winnersList" class="data-list">
+                    <!-- Winners will be rendered here -->
+                </div>
+            </div>
+
+            <div id="transactionsTab" class="tab-content">
+                <div id="transactionsList" class="data-list">
+                    <!-- Transactions will be rendered here -->
+                </div>
+            </div>
+
+            <div id="profileTab" class="tab-content">
+                <div class="profile-section">
+                    <h2>Your Profile</h2>
+                    <div class="profile-stats">
+                        <div class="profile-stat">
+                            <div class="profile-stat-value" id="profileContestsJoined">0</div>
+                            <div class="profile-stat-label">Contests Joined</div>
+                        </div>
+                        <div class="profile-stat">
+                            <div class="profile-stat-value" id="profileContestsWon">0</div>
+                            <div class="profile-stat-label">Contests Won</div>
+                        </div>
+                        <div class="profile-stat">
+                            <div class="profile-stat-value" id="profileTotalWinnings">₹0</div>
+                            <div class="profile-stat-label">Total Winnings</div>
+                        </div>
+                        <div class="profile-stat">
+                            <div class="profile-stat-value" id="profileWinRate">0%</div>
+                            <div class="profile-stat-label">Win Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="withdrawalTab" class="tab-content">
+                <div class="profile-section">
+                    <h2>Withdraw Money</h2>
+                    <p style="margin-bottom: 20px; color: var(--text-light);">Withdraw your winnings directly to your bank account</p>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Withdrawal Amount</label>
+                        <input type="number" class="form-input" id="withdrawalAmount" min="100" placeholder="Minimum ₹100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Bank Account Number</label>
+                        <input type="text" class="form-input" id="withdrawalAccount" placeholder="Enter your account number">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">IFSC Code</label>
+                        <input type="text" class="form-input" id="withdrawalIFSC" placeholder="Enter IFSC code">
+                    </div>
+                    
+                    <button class="btn btn-primary btn-full" onclick="handleWithdrawal()">
+                        <i class="fas fa-money-bill-wave"></i> Request Withdrawal
+                    </button>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: var(--background); border-radius: var(--radius); font-size: 0.9rem; color: var(--text-light);">
+                        <strong>Note:</strong> Withdrawals are processed within 24-48 hours. Minimum withdrawal amount is ₹100.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Section -->
+    <div id="loadingSection" class="loading-section">
+        <div class="loading-spinner"></div>
+        <p>Loading your lottery experience...</p>
+    </div>
+
+    <!-- Add Money Modal -->
+    <div id="addMoneyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Money to Wallet</h2>
+                <button class="modal-close" onclick="closeModal('addMoneyModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Select Amount</label>
+                    <div class="amount-buttons">
+                        <button class="amount-btn" onclick="setAmount(100)">₹100</button>
+                        <button class="amount-btn" onclick="setAmount(500)">₹500</button>
+                        <button class="amount-btn" onclick="setAmount(1000)">₹1,000</button>
+                        <button class="amount-btn" onclick="setAmount(2000)">₹2,000</button>
+                        <button class="amount-btn" onclick="setAmount(5000)">₹5,000</button>
+                        <button class="amount-btn" onclick="setAmount(10000)">₹10,000</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Or Enter Custom Amount</label>
+                    <input type="number" class="form-input" id="amountInput" min="10" max="50000" placeholder="Enter amount (₹10 - ₹50,000)" oninput="updatePaymentSummary()">
+                </div>
+                <div class="payment-summary">
+                    <div class="summary-row">
+                        <span>Amount:</span>
+                        <span id="paymentAmount">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Processing Fee:</span>
+                        <span id="processingFee">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Total:</span>
+                        <span id="totalAmount">₹0</span>
+                    </div>
+                </div>
+                <button class="btn btn-success btn-full" onclick="handlePayment()">
+                    <i class="fas fa-credit-card"></i> Proceed to Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration - Real production config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXeD8SMXHnqhNDg01Rlm4fC1t05Eb4NFs",
+            authDomain: "smart-lottery-b08c5.firebaseapp.com",
+            projectId: "smart-lottery-b08c5",
+            storageBucket: "smart-lottery-b08c5.appspot.com",
+            messagingSenderId: "1038545058004",
+            appId: "1:1038545058004:web:65b29c57eda2939f18e341",
+            measurementId: "G-SH9Y19ZE74"
+        };
+
+        // Global variables
+        let currentUser = null;
+        let userBalance = 0;
+        let auth, db, cashfree;
+        let isAdmin = false;
+        let contestCompletionInterval = null;
+        let userProfile = {
+            contestsJoined: 0,
+            contestsWon: 0,
+            totalWinnings: 0
+        };
+        let transactions = [];
+        let winners = [];
+
+        // Admin emails
+        const ADMIN_EMAILS = ['vishuu7306@gmail.com', 'admin@test.com'];
+
+        // Contest templates with house-favoring probabilities (5 contests as requested)
+        const CONTEST_TEMPLATES = [
+            {
+                id: 'contest1',
+                title: 'Daily Mega Jackpot',
+                entryFee: 50,
+                maxParticipants: 1000,
+                prizePool: 50000,
+                duration: 4 * 60 * 60 * 1000,
+                description: 'Our biggest daily contest with mega prizes',
+                prizeStructure: [
+                    { position: '1st Place', amount: 25000, percentage: '50%' },
+                    { position: '2nd Place', amount: 12500, percentage: '25%' },
+                    { position: '3rd Place', amount: 7500, percentage: '15%' }
+                ]
+            },
+            {
+                id: 'contest2',
+                title: 'Speed Contest - 1 Hour',
+                entryFee: 25,
+                maxParticipants: 500,
+                prizePool: 12500,
+                duration: 60 * 60 * 1000,
+                description: 'Quick 1-hour contest with instant results',
+                prizeStructure: [
+                    { position: '1st Place', amount: 6250, percentage: '50%' },
+                    { position: '2nd Place', amount: 3125, percentage: '25%' },
+                    { position: '3rd Place', amount: 1875, percentage: '15%' }
+                ]
+            },
+            {
+                id: 'contest3',
+                title: 'Evening Special',
+                entryFee: 100,
+                maxParticipants: 800,
+                prizePool: 80000,
+                duration: 6 * 60 * 60 * 1000,
+                description: 'Premium evening contest with life-changing prizes',
+                prizeStructure: [
+                    { position: '1st Place', amount: 40000, percentage: '50%' },
+                    { position: '2nd Place', amount: 20000, percentage: '25%' },
+                    { position: '3rd Place', amount: 12000, percentage: '15%' }
+                ]
+            },
+            {
+                id: 'contest4',
+                title: 'Weekly Super Draw',
+                entryFee: 200,
+                maxParticipants: 1200,
+                prizePool: 240000,
+                duration: 24 * 60 * 60 * 1000,
+                description: 'Weekly special with the biggest prize pool',
+                prizeStructure: [
+                    { position: '1st Place', amount: 120000, percentage: '50%' },
+                    { position: '2nd Place', amount: 60000, percentage: '25%' },
+                    { position: '3rd Place', amount: 36000, percentage: '15%' }
+                ]
+            },
+            {
+                id: 'contest5',
+                title: 'Millionaire Maker',
+                entryFee: 500,
+                maxParticipants: 1000,
+                prizePool: 500000,
+                duration: 48 * 60 * 60 * 1000,
+                description: 'The ultimate lottery contest - become a millionaire!',
+                prizeStructure: [
+                    { position: '1st Place', amount: 250000, percentage: '50%' },
+                    { position: '2nd Place', amount: 125000, percentage: '25%' },
+                    { position: '3rd Place', amount: 75000, percentage: '15%' }
+                ]
+            }
+        ];
+
+        // Sample data
+        const sampleWinners = [
+            { name: 'Rajesh Kumar', contest: 'Daily Mega Jackpot', prize: 20000, date: '2 hours ago' },
+            { name: 'Priya Sharma', contest: 'Speed Contest', prize: 8575, date: '3 hours ago' },
+            { name: 'Amit Singh', contest: 'Evening Special', prize: 39200, date: '5 hours ago' },
+            { name: 'Sneha Patel', contest: 'Weekly Super Draw', prize: 125000, date: '1 day ago' },
+            { name: 'Vikram Yadav', contest: 'Millionaire Maker', prize: 250000, date: '2 days ago' }
+        ];
+
+        const sampleTransactions = [
+            { type: 'deposit', amount: 1000, description: 'Wallet top-up', date: '2024-01-15', status: 'completed' },
+            { type: 'contest_entry', amount: -50, description: 'Joined Daily Mega Jackpot', date: '2024-01-15', status: 'completed' },
+            { type: 'prize_win', amount: 500, description: 'Prize from Speed Contest', date: '2024-01-14', status: 'completed' }
+        ];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing Smart Lottery Pro...');
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                // Initialize Firebase
+                firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                db = firebase.firestore();
+                
+                // Enable offline persistence
+                db.enablePersistence()
+                    .then(() => {
+                        console.log('Firestore persistence enabled');
+                    })
+                    .catch(err => {
+                        console.log('Firestore persistence failed:', err);
+                    });
+
+                // Initialize Cashfree
+                try {
+                    if (typeof Cashfree !== 'undefined') {
+                        cashfree = Cashfree({
+                            mode: "production" // Live mode
+                        });
+                        console.log('Cashfree initialized successfully');
+                    } else {
+                        console.log('Cashfree SDK not loaded');
+                    }
+                } catch (error) {
+                    console.log('Cashfree initialization failed:', error);
+                }
+
+                // Set up auth state listener
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        handleUserLogin(user);
+                    } else {
+                        handleUserLogout();
+                    }
+                });
+
+                // Load initial data
+                winners = [...sampleWinners];
+                transactions = [...sampleTransactions];
+                
+                // Update live stats periodically
+                setInterval(updateLiveStats, 10000);
+                
+                // Initialize payment summary
+                updatePaymentSummary();
+                
+                // Load contests from Firebase
+                loadContests();
+                
+                // Auto-complete contests
+                startContestAutoCompletion();
+                
+            } catch (error) {
+                console.error('App initialization error:', error);
+            }
+        }
+
+        async function loadContests() {
+            try {
+                const contestsRef = db.collection('contests');
+                const snapshot = await contestsRef.where('status', '==', 'active').get();
+                
+                if (snapshot.empty) {
+                    // Create initial contests if none exist
+                    await createInitialContests();
+                } else {
+                    const contests = [];
+                    snapshot.forEach(doc => {
+                        contests.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderContests(contests);
+                }
+            } catch (error) {
+                console.error('Error loading contests:', error);
+                // Fallback to demo contests
+                loadDemoContests();
+            }
+        }
+
+        async function createInitialContests() {
+            try {
+                const batch = db.batch();
+                
+                CONTEST_TEMPLATES.forEach(template => {
+                    const contestRef = db.collection('contests').doc(template.id);
+                    const contestData = {
+                        ...template,
+                        currentParticipants: Math.floor(Math.random() * (template.maxParticipants * 0.4)) + 50,
+                        endTime: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + template.duration)),
+                        status: 'active',
+                        participants: [],
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    batch.set(contestRef, contestData);
+                });
+                
+                await batch.commit();
+                console.log('Initial contests created');
+                loadContests();
+            } catch (error) {
+                console.error('Error creating contests:', error);
+                loadDemoContests();
+            }
+        }
+
+        function loadDemoContests() {
+            const contests = CONTEST_TEMPLATES.map(template => ({
+                ...template,
+                currentParticipants: Math.floor(Math.random() * (template.maxParticipants * 0.4)) + 50,
+                endTime: new Date(Date.now() + template.duration),
+                status: 'active',
+                participants: []
+            }));
+            
+            renderContests(contests);
+        }
+
+        function renderContests(contests) {
+            const contestGrid = document.getElementById('contestGrid');
+            contestGrid.innerHTML = '';
+
+            contests.forEach(contest => {
+                const timeRemaining = getTimeRemaining(contest.endTime);
+                const progressPercentage = (contest.currentParticipants / contest.maxParticipants) * 100;
+                
+                const contestCard = document.createElement('div');
+                contestCard.className = 'contest-card card';
+                contestCard.innerHTML = `
+                    <div class="contest-title">
+                        <i class="fas fa-trophy"></i>
+                        ${contest.title}
+                    </div>
+                    <div class="contest-prize">
+                        <span class="rupee-symbol">₹</span>${contest.prizePool.toLocaleString()}
+                    </div>
+                    <div class="contest-details">
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-ticket-alt"></i> Entry Fee:</span>
+                            <span class="detail-value">₹${contest.entryFee}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-users"></i> Participants:</span>
+                            <span class="detail-value">${contest.currentParticipants}/${contest.maxParticipants}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-clock"></i> Time Left:</span>
+                            <span class="detail-value">${timeRemaining}</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progressPercentage}%"></div>
+                    </div>
+                    <div class="prize-distribution">
+                        <div class="prize-toggle" onclick="togglePrizeDetails('${contest.id}')">
+                            <span><i class="fas fa-gift"></i> Prize Distribution </span>
+                            <i class="fas fa-chevron-down" id="chevron-${contest.id}"></i>
+                        </div>
+                        <div class="prize-details" id="prize-${contest.id}">
+                            ${contest.prizeStructure.map(prize => `
+                                <div class="prize-item">
+                                    <span class="prize-position">${prize.position}</span>
+                                    <span class="prize-amount">₹${prize.amount.toLocaleString()}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" onclick="joinContest('${contest.id}', ${contest.entryFee})" 
+                            ${contest.currentParticipants >= contest.maxParticipants ? 'disabled' : ''}>
+                        <i class="fas fa-play-circle"></i> 
+                        ${contest.currentParticipants >= contest.maxParticipants ? 'Contest Full' : 'Join Contest'}
+                    </button>
+                `;
+                contestGrid.appendChild(contestCard);
+            });
+        }
+
+        function showAuth() {
+            document.getElementById('landingSection').style.display = 'none';
+            document.getElementById('authSection').style.display = 'block';
+        }
+
+        function toggleAuthForm(formType) {
+            const forms = ['loginForm', 'signupForm'];
+            forms.forEach(form => {
+                document.getElementById(form).style.display = 'none';
+            });
+            
+            if (formType === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+            } else if (formType === 'signup') {
+                document.getElementById('signupForm').style.display = 'block';
+            }
+        }
+
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Signing in...', 'success');
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification('Invalid email or password', 'error');
+            }
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            
+            if (!name || !email || !password) {
+                showNotification('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Creating account...', 'success');
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // Update user profile
+                await userCredential.user.updateProfile({
+                    displayName: name
+                });
+
+                // Create user document in Firestore
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    displayName: name,
+                    email: email,
+                    balance: 0,
+                    contestsJoined: 0,
+                    contestsWon: 0,
+                    totalWinnings: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showNotification('Account created successfully!', 'success');
+            } catch (error) {
+                console.error('Signup error:', error);
+                if (error.code === 'auth/email-already-in-use') {
+                    showNotification('Email already in use', 'error');
+                } else {
+                    showNotification('Failed to create account', 'error');
+                }
+            }
+        }
+
+        async function handleUserLogin(user) {
+            currentUser = user;
+            isAdmin = ADMIN_EMAILS.includes(user.email);
+            
+            // Update UI
+            document.getElementById('landingSection').style.display = 'none';
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'block';
+
+            // Set user info
+            document.getElementById('userDisplayName').textContent = user.displayName || 'Smart Player';
+            document.getElementById('userAvatar').textContent = (user.displayName || 'U')[0].toUpperCase();
+
+            // Load user data from Firestore
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    userBalance = userData.balance || 0;
+                    userProfile = {
+                        contestsJoined: userData.contestsJoined || 0,
+                        contestsWon: userData.contestsWon || 0,
+                        totalWinnings: userData.totalWinnings || 0
+                    };
+                    
+                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                    updateProfileStats();
+                    loadUserTransactions();
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                userBalance = 0;
+                document.getElementById('userBalance').textContent = '₹0';
+            }
+
+            renderWinners();
+            loadContests();
+        }
+
+        async function handleLogout() {
+            try {
+                await auth.signOut();
+                currentUser = null;
+                userBalance = 0;
+                isAdmin = false;
+                
+                // Reset UI
+                document.getElementById('landingSection').style.display = 'block';
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('userSection').style.display = 'none';
+                
+                // Clear forms
+                document.querySelectorAll('.form-input').forEach(input => input.value = '');
+                toggleAuthForm('login');
+                
+                showNotification('Logged out successfully', 'success');
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        function togglePrizeDetails(contestId) {
+            const prizeDetails = document.getElementById(`prize-${contestId}`);
+            const chevron = document.getElementById(`chevron-${contestId}`);
+            
+            if (prizeDetails.classList.contains('show')) {
+                prizeDetails.classList.remove('show');
+                chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            } else {
+                prizeDetails.classList.add('show');
+                chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            }
+        }
+
+        async function joinContest(contestId, entryFee) {
+            if (!currentUser) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+
+            if (userBalance < entryFee) {
+                showNotification('Insufficient balance. Please add money to your wallet.', 'error');
+                openModal('addMoneyModal');
+                return;
+            }
+
+            try {
+                const batch = db.batch();
+                
+                // Update user balance and stats
+                const userRef = db.collection('users').doc(currentUser.uid);
+                batch.update(userRef, {
+                    balance: firebase.firestore.FieldValue.increment(-entryFee),
+                    contestsJoined: firebase.firestore.FieldValue.increment(1),
+                    transactions: firebase.firestore.FieldValue.arrayUnion({
+                        type: 'contest_entry',
+                        amount: -entryFee,
+                        description: `Joined contest: ${contestId}`,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'completed'
+                    })
+                });
+
+                // Update contest participants
+                const contestRef = db.collection('contests').doc(contestId);
+                batch.update(contestRef, {
+                    currentParticipants: firebase.firestore.FieldValue.increment(1),
+                    participants: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                });
+
+                await batch.commit();
+
+                // Update local state
+                userBalance -= entryFee;
+                userProfile.contestsJoined++;
+                
+                document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                updateProfileStats();
+                loadUserTransactions();
+                loadContests();
+                
+                showNotification('Successfully joined the contest!', 'success');
+                
+                // Simulate contest result after delay (for demo purposes)
+                setTimeout(() => {
+                    simulateContestResult(contestId, entryFee);
+                }, 30000); // 30 seconds for demo
+                
+            } catch (error) {
+                console.error('Error joining contest:', error);
+                showNotification('Failed to join contest. Please try again.', 'error');
+            }
+        }
+
+        async function simulateContestResult(contestId, entryFee) {
+            // 20% chance for 2nd place, 80% chance for 3rd place, 0% for 1st (as per requirements)
+            const random = Math.random();
+            let prize = 0;
+            let position = '';
+            
+            if (random < 0.20) { // 20% chance for 2nd place
+                const contest = CONTEST_TEMPLATES.find(c => c.id === contestId);
+                if (contest) {
+                    prize = contest.prizeStructure[1].amount;
+                    position = '2nd Place';
+                }
+            } else if (random < 1.0) { // 80% chance for 3rd place
+                const contest = CONTEST_TEMPLATES.find(c => c.id === contestId);
+                if (contest) {
+                    prize = contest.prizeStructure[2].amount;
+                    position = '3rd Place';
+                }
+            }
+            
+            if (prize > 0 && currentUser) {
+                try {
+                    const userRef = db.collection('users').doc(currentUser.uid);
+                    await userRef.update({
+                        balance: firebase.firestore.FieldValue.increment(prize),
+                        contestsWon: firebase.firestore.FieldValue.increment(1),
+                        totalWinnings: firebase.firestore.FieldValue.increment(prize),
+                        transactions: firebase.firestore.FieldValue.arrayUnion({
+                            type: 'prize_win',
+                            amount: prize,
+                            description: `Won ${position} in ${contestId}`,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            status: 'completed'
+                        })
+                    });
+                    
+                    userBalance += prize;
+                    userProfile.contestsWon++;
+                    userProfile.totalWinnings += prize;
+                    
+                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                    updateProfileStats();
+                    loadUserTransactions();
+                    
+                    showNotification(`Congratulations! You won ${position} and ₹${prize.toLocaleString()}!`, 'success');
+                } catch (error) {
+                    console.error('Error updating prize:', error);
+                }
+            }
+        }
+
+        async function loadUserTransactions() {
+            if (!currentUser) return;
+            
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    transactions = userData.transactions || [];
+                    renderTransactions();
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                renderTransactions(); // Show empty state
+            }
+        }
+
+        function renderWinners() {
+            const winnersList = document.getElementById('winnersList');
+            winnersList.innerHTML = '';
+
+            winners.forEach(winner => {
+                const winnerItem = document.createElement('div');
+                winnerItem.className = 'data-item';
+                winnerItem.innerHTML = `
+                    <div class="data-item-info">
+                        <div class="data-item-title">${winner.name}</div>
+                        <div class="data-item-subtitle">${winner.contest} • ${winner.date}</div>
+                    </div>
+                    <div class="data-item-value">₹${winner.prize.toLocaleString()}</div>
+                `;
+                winnersList.appendChild(winnerItem);
+            });
+        }
+
+        function renderTransactions() {
+            const transactionsList = document.getElementById('transactionsList');
+            transactionsList.innerHTML = '';
+
+            if (transactions.length === 0) {
+                transactionsList.innerHTML = '<div class="data-item"><div class="data-item-info">No transactions yet</div></div>';
+                return;
+            }
+
+            transactions.slice().reverse().forEach(transaction => {
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'data-item';
+                const amountClass = transaction.amount > 0 ? 'positive' : 'negative';
+                const amountPrefix = transaction.amount > 0 ? '+' : '';
+                
+                transactionItem.innerHTML = `
+                    <div class="data-item-info">
+                        <div class="data-item-title">${transaction.description}</div>
+                        <div class="data-item-subtitle">${transaction.date || 'Recent'} • ${transaction.status}</div>
+                    </div>
+                    <div class="data-item-value transaction-amount ${amountClass}">
+                        ${amountPrefix}₹${Math.abs(transaction.amount).toLocaleString()}
+                    </div>
+                `;
+                transactionsList.appendChild(transactionItem);
+            });
+        }
+
+        function updateProfileStats() {
+            document.getElementById('profileContestsJoined').textContent = userProfile.contestsJoined;
+            document.getElementById('profileContestsWon').textContent = userProfile.contestsWon;
+            document.getElementById('profileTotalWinnings').textContent = '₹' + userProfile.totalWinnings.toLocaleString();
+            
+            const winRate = userProfile.contestsJoined > 0 ? 
+                Math.round((userProfile.contestsWon / userProfile.contestsJoined) * 100) : 0;
+            document.getElementById('profileWinRate').textContent = winRate + '%';
+        }
+
+        async function handleWithdrawal() {
+            if (!currentUser) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+
+            const amount = parseInt(document.getElementById('withdrawalAmount').value);
+            const account = document.getElementById('withdrawalAccount').value;
+            const ifsc = document.getElementById('withdrawalIFSC').value;
+            
+            if (!amount || amount < 100) {
+                showNotification('Minimum withdrawal amount is ₹100', 'error');
+                return;
+            }
+            
+            if (amount > userBalance) {
+                showNotification('Insufficient balance', 'error');
+                return;
+            }
+            
+            if (!account || !ifsc) {
+                showNotification('Please fill in all bank details', 'error');
+                return;
+            }
+            
+            try {
+                const userRef = db.collection('users').doc(currentUser.uid);
+                await userRef.update({
+                    balance: firebase.firestore.FieldValue.increment(-amount),
+                    transactions: firebase.firestore.FieldValue.arrayUnion({
+                        type: 'withdrawal',
+                        amount: -amount,
+                        description: `Withdrawal to account ***${account.slice(-4)}`,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'processing'
+                    })
+                });
+                
+                userBalance -= amount;
+                document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                loadUserTransactions();
+                
+                // Clear form
+                document.getElementById('withdrawalAmount').value = '';
+                document.getElementById('withdrawalAccount').value = '';
+                document.getElementById('withdrawalIFSC').value = '';
+                
+                showNotification('Withdrawal request submitted successfully!', 'success');
+            } catch (error) {
+                console.error('Error processing withdrawal:', error);
+                showNotification('Failed to process withdrawal. Please try again.', 'error');
+            }
+        }
+
+        function setAmount(amount) {
+            document.getElementById('amountInput').value = amount;
+            updatePaymentSummary();
+        }
+
+        function updatePaymentSummary() {
+            const amount = parseInt(document.getElementById('amountInput').value) || 0;
+            const processingFee = 2; // Fixed ₹2 as requested
+            const total = amount + processingFee;
+
+            document.getElementById('paymentAmount').textContent = '₹' + amount.toLocaleString();
+            document.getElementById('processingFee').textContent = '₹' + processingFee;
+            document.getElementById('totalAmount').textContent = '₹' + total.toLocaleString();
+        }
+
+        async function handlePayment() {
+            const amount = parseInt(document.getElementById('amountInput').value);
+            
+            if (!amount || amount < 10) {
+                showNotification('Please enter a valid amount (minimum ₹10)', 'error');
+                return;
+            }
+
+            if (amount > 50000) {
+                showNotification('Maximum amount allowed is ₹50,000', 'error');
+                return;
+            }
+
+            if (!currentUser) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Initiating payment...', 'success');
+                
+                // Get auth token for Firebase Functions
+                const token = await currentUser.getIdToken();
+                
+                // Create payment session via Firebase Functions
+                const response = await fetch('https://smart-lottery-b08c5.cloudfunctions.net/createPaymentSession', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        order_id: `order_${Date.now()}_${currentUser.uid}`,
+                        order_amount: amount + 2, // Include processing fee
+                        order_currency: 'INR',
+                        customer_details: {
+                            customer_id: currentUser.uid,
+                            customer_email: currentUser.email,
+                            customer_phone: '+919999999999' // Default phone for demo
+                        },
+                        order_meta: {
+                            wallet_amount: amount,
+                            processing_fee: 2
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create payment session');
+                }
+
+                const sessionData = await response.json();
+                
+                if (cashfree && sessionData.payment_session_id) {
+                    const checkoutOptions = {
+                        paymentSessionId: sessionData.payment_session_id,
+                        redirectTarget: "_modal"
+                    };
+
+                    cashfree.checkout(checkoutOptions).then(result => {
+                        if (result.error) {
+                            showNotification('Payment failed: ' + result.error.message, 'error');
+                        } else if (result.paymentDetails && result.paymentDetails.paymentStatus === 'SUCCESS') {
+                            handlePaymentSuccess(amount, sessionData.payment_session_id);
+                        }
+                    });
+                } else {
+                    throw new Error('Cashfree not initialized or invalid session');
+                }
+                
+            } catch (error) {
+                console.error('Payment error:', error);
+                showNotification('Payment failed. Please try again.', 'error');
+            }
+        }
+
+        async function handlePaymentSuccess(amount, sessionId) {
+            try {
+                // Verify payment with Firebase Functions
+                const token = await currentUser.getIdToken();
+                const response = await fetch('https://smart-lottery-b08c5.cloudfunctions.net/verifyPayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId
+                    })
+                });
+
+                if (response.ok) {
+                    const verification = await response.json();
+                    if (verification.paymentStatus === 'completed') {
+                        // Payment verified, update local state
+                        userBalance += amount;
+                        document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                        loadUserTransactions();
+                        
+                        closeModal('addMoneyModal');
+                        document.getElementById('amountInput').value = '';
+                        updatePaymentSummary();
+                        
+                        showNotification('₹' + amount.toLocaleString() + ' added to your wallet successfully!', 'success');
+                    } else {
+                        throw new Error('Payment verification failed');
+                    }
+                } else {
+                    throw new Error('Payment verification failed');
+                }
+            } catch (error) {
+                console.error('Payment verification error:', error);
+                showNotification('Payment verification failed. Please contact support.', 'error');
+            }
+        }
+
+        function getTimeRemaining(endTime) {
+            const now = new Date();
+            let timeDiff;
+            
+            if (endTime.toDate) {
+                timeDiff = endTime.toDate() - now;
+            } else {
+                timeDiff = new Date(endTime) - now;
+            }
+            
+            if (timeDiff <= 0) return 'Ended';
+            
+            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+
+        function updateLiveStats() {
+            const elements = {
+                totalUsers: document.getElementById('totalUsers'),
+                totalPrizes: document.getElementById('totalPrizes'),
+                winnersToday: document.getElementById('winnersToday')
+            };
+
+            if (elements.totalUsers) {
+                const currentUsers = parseInt(elements.totalUsers.textContent.replace(',', ''));
+                elements.totalUsers.textContent = (currentUsers + Math.floor(Math.random() * 8) + 1).toLocaleString();
+            }
+
+            if (elements.totalPrizes) {
+                const currentPrizes = parseFloat(elements.totalPrizes.textContent.replace('₹', '').replace('L', '')) * 100000;
+                const newPrizes = currentPrizes + (Math.random() * 15000) + 5000;
+                elements.totalPrizes.textContent = '₹' + (newPrizes / 100000).toFixed(1) + 'L';
+            }
+
+            if (elements.winnersToday) {
+                const currentWinners = parseInt(elements.winnersToday.textContent);
+                elements.winnersToday.textContent = currentWinners + Math.floor(Math.random() * 4) + 1;
+            }
+        }
+
+        function startContestAutoCompletion() {
+            contestCompletionInterval = setInterval(async () => {
+                try {
+                    const contestsRef = db.collection('contests');
+                    const snapshot = await contestsRef.where('status', '==', 'active')
+                                                    .where('endTime', '<=', firebase.firestore.Timestamp.now())
+                                                    .get();
+                    
+                    const batch = db.batch();
+                    snapshot.forEach(doc => {
+                        batch.update(doc.ref, { status: 'completed' });
+                    });
+                    
+                    if (!snapshot.empty) {
+                        await batch.commit();
+                        loadContests(); // Refresh contests
+                    }
+                } catch (error) {
+                    console.error('Error completing contest:', error);
+                }
+            }, 60000); // Check every minute
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function showNotification(message, type) {
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notification => notification.remove());
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                ${message}
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Auto-update contests every minute
+        setInterval(() => {
+            if (currentUser) {
+                loadContests();
+            }
+        }, 60000);
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
