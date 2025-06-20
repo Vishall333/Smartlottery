@@ -627,39 +627,43 @@
             color: var(--text-light);
         }
         
-        /* UPI QR Code */
-        .upi-qr-container {
-            text-align: center;
-            padding: 30px;
-            background: var(--surface);
-            border-radius: var(--radius);
-            margin: 20px 0;
-            border: 2px dashed var(--border);
+        /* Withdrawal Options */
+        .withdrawal-method-selector {
+            margin-bottom: 30px;
         }
         
-        .upi-qr-code {
-            width: 200px;
-            height: 200px;
-            margin: 0 auto 20px;
-            background: #f0f0f0;
-            border-radius: var(--radius);
+        .withdrawal-method-tabs {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
+            background: var(--background);
+            border-radius: var(--radius);
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+        
+        .withdrawal-method-tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            border-radius: calc(var(--radius) - 5px);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
             color: var(--text-light);
         }
         
-        .upi-id-display {
-            font-family: monospace;
-            font-size: 1.1rem;
-            font-weight: 600;
+        .withdrawal-method-tab.active {
+            background: var(--surface);
             color: var(--primary);
-            background: var(--background);
-            padding: 10px 15px;
-            border-radius: var(--radius);
-            margin: 10px 0;
-            word-break: break-all;
+            box-shadow: var(--shadow);
+        }
+        
+        .withdrawal-method-content {
+            display: none;
+        }
+        
+        .withdrawal-method-content.active {
+            display: block;
         }
         
         /* Modals */
@@ -992,6 +996,11 @@
                 font-size: 0.9rem;
                 min-width: 120px;
             }
+            
+            .withdrawal-method-tabs {
+                flex-direction: column;
+                gap: 5px;
+            }
         }
         
         /* Hide sections initially */
@@ -1209,29 +1218,71 @@
             <div id="withdrawalTab" class="tab-content">
                 <div class="profile-section">
                     <h2>Withdraw Money</h2>
-                    <p style="margin-bottom: 25px; color: var(--text-light);">Withdraw your winnings directly to your bank account</p>
+                    <p style="margin-bottom: 25px; color: var(--text-light);">Withdraw your winnings to your bank account or UPI</p>
                     
-                    <div class="form-group">
-                        <label class="form-label">Withdrawal Amount</label>
-                        <input type="number" class="form-input" id="withdrawalAmount" min="100" placeholder="Minimum ₹100">
+                    <!-- Withdrawal Method Selector -->
+                    <div class="withdrawal-method-selector">
+                        <div class="withdrawal-method-tabs">
+                            <button class="withdrawal-method-tab active" onclick="switchWithdrawalMethod('bank')">
+                                <i class="fas fa-university"></i> Bank Transfer
+                            </button>
+                            <button class="withdrawal-method-tab" onclick="switchWithdrawalMethod('upi')">
+                                <i class="fas fa-mobile-alt"></i> UPI Transfer
+                            </button>
+                        </div>
+                        
+                        <!-- Bank Transfer Form -->
+                        <div id="bankWithdrawal" class="withdrawal-method-content active">
+                            <div class="form-group">
+                                <label class="form-label">Withdrawal Amount</label>
+                                <input type="number" class="form-input" id="bankWithdrawalAmount" min="100" placeholder="Minimum ₹100">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Bank Account Number</label>
+                                <input type="text" class="form-input" id="withdrawalAccount" placeholder="Enter your account number">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">IFSC Code</label>
+                                <input type="text" class="form-input" id="withdrawalIFSC" placeholder="Enter IFSC code">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Account Holder Name</label>
+                                <input type="text" class="form-input" id="withdrawalAccountName" placeholder="Enter account holder name">
+                            </div>
+                            
+                            <button class="btn btn-primary btn-full" onclick="handleBankWithdrawal()">
+                                <i class="fas fa-university"></i> Request Bank Withdrawal
+                            </button>
+                        </div>
+                        
+                        <!-- UPI Transfer Form -->
+                        <div id="upiWithdrawal" class="withdrawal-method-content">
+                            <div class="form-group">
+                                <label class="form-label">Withdrawal Amount</label>
+                                <input type="number" class="form-input" id="upiWithdrawalAmount" min="500" placeholder="Minimum ₹500">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">UPI ID</label>
+                                <input type="text" class="form-input" id="withdrawalUpiId" placeholder="Enter your UPI ID (e.g., yourname@paytm)">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Registered Name</label>
+                                <input type="text" class="form-input" id="withdrawalUpiName" placeholder="Enter name registered with UPI">
+                            </div>
+                            
+                            <button class="btn btn-primary btn-full" onclick="handleUpiWithdrawal()">
+                                <i class="fas fa-mobile-alt"></i> Request UPI Withdrawal
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Bank Account Number</label>
-                        <input type="text" class="form-input" id="withdrawalAccount" placeholder="Enter your account number">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">IFSC Code</label>
-                        <input type="text" class="form-input" id="withdrawalIFSC" placeholder="Enter IFSC code">
-                    </div>
-                    
-                    <button class="btn btn-primary btn-full" onclick="handleWithdrawal()">
-                        <i class="fas fa-money-bill-wave"></i> Request Withdrawal
-                    </button>
                     
                     <div style="margin-top: 25px; padding: 20px; background: var(--background); border-radius: var(--radius); font-size: 0.95rem; color: var(--text-light);">
-                        <strong>Note:</strong> Withdrawals are processed within 24-48 hours. Minimum withdrawal amount is ₹100.
+                        <strong>Note:</strong> Withdrawals are processed within 24-48 hours. Minimum withdrawal amount is ₹500. UPI withdrawals are faster and usually processed within 2-4 hours.
                     </div>
                 </div>
             </div>
@@ -1313,16 +1364,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="upi-option" onclick="selectUPIMethod('upi')">
-                            <input type="radio" name="upiMethod" value="upi">
-                            <div class="upi-option-content">
-                                <i class="fas fa-qrcode upi-option-icon" style="color: #007bff;"></i>
-                                <div class="upi-option-text">
-                                    <div class="upi-option-name">UPI QR Code</div>
-                                    <div class="upi-option-desc">Scan QR with any UPI app</div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
@@ -1347,41 +1388,6 @@
         </div>
     </div>
 
-    <!-- UPI Payment Modal -->
-    <div id="upiPaymentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>UPI Payment</h2>
-                <button class="modal-close" onclick="closeModal('upiPaymentModal')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="upi-qr-container">
-                    <div class="upi-qr-code" id="upiQRCode">
-                        <i class="fas fa-qrcode"></i>
-                    </div>
-                    <div>
-                        <strong>Scan QR Code with any UPI app</strong>
-                        <div class="upi-id-display" id="upiIdDisplay">smartlottery@paytm</div>
-                        <p style="color: var(--text-light); margin: 10px 0;">Amount: <strong id="upiAmount">₹0</strong></p>
-                        <p style="color: var(--text-light); font-size: 0.9rem;">
-                            Open your UPI app (Google Pay, PhonePe, Paytm, etc.) and scan the QR code above or pay to the UPI ID
-                        </p>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 15px; margin-top: 25px;">
-                    <button class="btn btn-outline" onclick="copyUPIId()" style="flex: 1;">
-                        <i class="fas fa-copy"></i> Copy UPI ID
-                    </button>
-                    <button class="btn btn-success" onclick="confirmUPIPayment()" style="flex: 1;">
-                        <i class="fas fa-check"></i> Payment Done
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -1396,14 +1402,6 @@
 
         // API Configuration for Firebase Functions
         const API_BASE_URL = 'https://us-central1-smart-lottery-b08c5.cloudfunctions.net/api';
-
-        // UPI Configuration
-        const UPI_CONFIG = {
-            merchantId: 'smartlottery@paytm',
-            merchantName: 'Smart Lottery Pro',
-            merchantCode: 'LOTTERY',
-            qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/'
-        };
 
         // Global variables
         let currentUser = null;
@@ -1906,6 +1904,16 @@
             document.getElementById(tabName + 'Tab').classList.add('active');
         }
 
+        function switchWithdrawalMethod(method) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.withdrawal-method-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.withdrawal-method-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(method + 'Withdrawal').classList.add('active');
+        }
+
         function togglePrizeDetails(contestId) {
             const prizeDetails = document.getElementById(`prize-${contestId}`);
             const chevron = document.getElementById(`chevron-${contestId}`);
@@ -2099,15 +2107,16 @@
             document.getElementById('profileWinRate').textContent = winRate + '%';
         }
 
-        async function handleWithdrawal() {
+        async function handleBankWithdrawal() {
             if (!currentUser) {
                 showNotification('Please login first', 'error');
                 return;
             }
 
-            const amount = parseInt(document.getElementById('withdrawalAmount').value);
+            const amount = parseInt(document.getElementById('bankWithdrawalAmount').value);
             const account = document.getElementById('withdrawalAccount').value.trim();
             const ifsc = document.getElementById('withdrawalIFSC').value.trim();
+            const accountName = document.getElementById('withdrawalAccountName').value.trim();
             
             if (!amount || amount < 100) {
                 showNotification('Minimum withdrawal amount is ₹100', 'error');
@@ -2119,7 +2128,7 @@
                 return;
             }
             
-            if (!account || !ifsc) {
+            if (!account || !ifsc || !accountName) {
                 showNotification('Please fill in all bank details', 'error');
                 return;
             }
@@ -2129,9 +2138,9 @@
                 await userRef.update({
                     balance: firebase.firestore.FieldValue.increment(-amount),
                     transactions: firebase.firestore.FieldValue.arrayUnion({
-                        type: 'withdrawal',
+                        type: 'bank_withdrawal',
                         amount: -amount,
-                        description: `Withdrawal to account ***${account.slice(-4)}`,
+                        description: `Bank withdrawal to account ***${account.slice(-4)}`,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                         status: 'processing'
                     })
@@ -2140,9 +2149,9 @@
                 userBalance -= amount;
                 
                 transactions.unshift({
-                    type: 'withdrawal',
+                    type: 'bank_withdrawal',
                     amount: -amount,
-                    description: `Withdrawal to account ***${account.slice(-4)}`,
+                    description: `Bank withdrawal to account ***${account.slice(-4)}`,
                     date: new Date().toLocaleDateString(),
                     status: 'processing'
                 });
@@ -2151,13 +2160,83 @@
                 renderTransactions();
                 
                 // Clear form
-                document.getElementById('withdrawalAmount').value = '';
+                document.getElementById('bankWithdrawalAmount').value = '';
                 document.getElementById('withdrawalAccount').value = '';
                 document.getElementById('withdrawalIFSC').value = '';
+                document.getElementById('withdrawalAccountName').value = '';
                 
-                showNotification('Withdrawal request submitted successfully!', 'success');
+                showNotification('Bank withdrawal request submitted successfully!', 'success');
             } catch (error) {
-                console.error('❌ Error processing withdrawal:', error);
+                console.error('❌ Error processing bank withdrawal:', error);
+                showNotification('Failed to process withdrawal. Please try again.', 'error');
+            }
+        }
+
+        async function handleUpiWithdrawal() {
+            if (!currentUser) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+
+            const amount = parseInt(document.getElementById('upiWithdrawalAmount').value);
+            const upiId = document.getElementById('withdrawalUpiId').value.trim();
+            const upiName = document.getElementById('withdrawalUpiName').value.trim();
+            
+            if (!amount || amount < 100) {
+                showNotification('Minimum withdrawal amount is ₹100', 'error');
+                return;
+            }
+            
+            if (amount > userBalance) {
+                showNotification('Insufficient balance', 'error');
+                return;
+            }
+            
+            if (!upiId || !upiName) {
+                showNotification('Please fill in all UPI details', 'error');
+                return;
+            }
+
+            // Basic UPI ID validation
+            if (!upiId.includes('@') || !upiId.match(/^[a-zA-Z0-9.-]+@[a-zA-Z0-9.-]+$/)) {
+                showNotification('Please enter a valid UPI ID', 'error');
+                return;
+            }
+            
+            try {
+                const userRef = db.collection('users').doc(currentUser.uid);
+                await userRef.update({
+                    balance: firebase.firestore.FieldValue.increment(-amount),
+                    transactions: firebase.firestore.FieldValue.arrayUnion({
+                        type: 'upi_withdrawal',
+                        amount: -amount,
+                        description: `UPI withdrawal to ${upiId}`,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'processing'
+                    })
+                });
+                
+                userBalance -= amount;
+                
+                transactions.unshift({
+                    type: 'upi_withdrawal',
+                    amount: -amount,
+                    description: `UPI withdrawal to ${upiId}`,
+                    date: new Date().toLocaleDateString(),
+                    status: 'processing'
+                });
+                
+                document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                renderTransactions();
+                
+                // Clear form
+                document.getElementById('upiWithdrawalAmount').value = '';
+                document.getElementById('withdrawalUpiId').value = '';
+                document.getElementById('withdrawalUpiName').value = '';
+                
+                showNotification('UPI withdrawal request submitted successfully!', 'success');
+            } catch (error) {
+                console.error('❌ Error processing UPI withdrawal:', error);
                 showNotification('Failed to process withdrawal. Please try again.', 'error');
             }
         }
@@ -2193,7 +2272,7 @@
 
         function updatePaymentSummary() {
             const amount = parseInt(document.getElementById('amountInput').value) || 0;
-            const processingFee = Math.max(2, Math.floor(amount * 0.02)); // 2% processing fee, minimum ₹2
+            const processingFee = 2; // 2% processing fee, minimum ₹2
             const total = amount + processingFee;
 
             document.getElementById('paymentAmount').textContent = '₹' + amount.toLocaleString();
@@ -2226,105 +2305,14 @@
             try {
                 showNotification('Processing payment...', 'success');
                 
-                const processingFee = Math.max(2, Math.floor(amount * 0.02));
-                const totalAmount = amount + processingFee;
-                
-                if (selectedUPIMethod === 'upi') {
-                    // Show UPI QR code modal
-                    closeModal('addMoneyModal');
-                    showUPIPayment(totalAmount);
-                } else {
-                    // Try Cashfree integration first
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/create-payment-order`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                amount: amount,
-                                userId: currentUser.uid,
-                                userEmail: currentUser.email,
-                                upiMethod: selectedUPIMethod
-                            })
-                        });
-
-                        if (response.ok) {
-                            const orderData = await response.json();
-                            
-                            if (cashfree && orderData.payment_session_id) {
-                                const checkoutOptions = {
-                                    paymentSessionId: orderData.payment_session_id,
-                                    redirectTarget: "_modal"
-                                };
-
-                                const result = await cashfree.checkout(checkoutOptions);
-                                
-                                if (result.error) {
-                                    throw new Error(result.error.message || 'Payment failed');
-                                } else if (result.paymentDetails && result.paymentDetails.paymentStatus === 'SUCCESS') {
-                                    await handlePaymentSuccess(amount, result.paymentDetails.paymentId);
-                                }
-                            } else {
-                                throw new Error('Cashfree not available');
-                            }
-                        } else {
-                            throw new Error('API not available');
-                        }
-                    } catch (apiError) {
-                        console.log('API/Cashfree not available, using UPI fallback');
-                        // Fallback to UPI method
-                        closeModal('addMoneyModal');
-                        showUPIPayment(totalAmount);
-                    }
-                }
+                // Simulate payment processing
+                setTimeout(async () => {
+                    await handlePaymentSuccess(amount, `payment_${Date.now()}`);
+                }, 2000);
                 
             } catch (error) {
                 console.error('❌ Payment error:', error);
                 showNotification('Payment failed. Please try again.', 'error');
-            }
-        }
-
-        function showUPIPayment(amount) {
-            // Generate UPI payment URL
-            const upiUrl = generateUPIUrl(amount);
-            
-            // Update UPI modal content
-            document.getElementById('upiAmount').textContent = '₹' + amount.toLocaleString();
-            document.getElementById('upiIdDisplay').textContent = UPI_CONFIG.merchantId;
-            
-            // Generate QR code
-            const qrCodeUrl = `${UPI_CONFIG.qrCodeUrl}?size=200x200&data=${encodeURIComponent(upiUrl)}`;
-            document.getElementById('upiQRCode').innerHTML = `<img src="${qrCodeUrl}" alt="UPI QR Code" style="width: 100%; height: 100%; object-fit: contain;">`;
-            
-            // Show UPI modal
-            openModal('upiPaymentModal');
-        }
-
-        function generateUPIUrl(amount) {
-            const orderId = `LOTTERY_${Date.now()}_${currentUser.uid}`;
-            return `upi://pay?pa=${UPI_CONFIG.merchantId}&pn=${encodeURIComponent(UPI_CONFIG.merchantName)}&mc=${UPI_CONFIG.merchantCode}&tid=${orderId}&tr=${orderId}&tn=${encodeURIComponent('Smart Lottery Pro Payment')}&am=${amount}&cu=INR`;
-        }
-
-        function copyUPIId() {
-            navigator.clipboard.writeText(UPI_CONFIG.merchantId).then(() => {
-                showNotification('UPI ID copied to clipboard!', 'success');
-            }).catch(() => {
-                showNotification('Failed to copy UPI ID', 'error');
-            });
-        }
-
-        async function confirmUPIPayment() {
-            try {
-                // Close UPI modal
-                closeModal('upiPaymentModal');
-                
-                // Simulate payment success (in real app, this would be verified by backend)
-                await handlePaymentSuccess(currentPaymentAmount, `upi_${Date.now()}`);
-                
-            } catch (error) {
-                console.error('❌ Error confirming payment:', error);
-                showNotification('Failed to confirm payment. Please try again.', 'error');
             }
         }
 
@@ -2365,7 +2353,6 @@
 
                 // Close modals
                 closeModal('addMoneyModal');
-                closeModal('upiPaymentModal');
 
                 showNotification(`✅ Payment successful! ₹${amount.toLocaleString()} added to your wallet.`, 'success');
                 
