@@ -903,6 +903,72 @@
             font-weight: 700;
             font-size: 1.2rem;
         }
+
+        /* Joined Contest Styles */
+        .joined-contest-card {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary);
+        }
+
+        .joined-contest-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .joined-contest-title {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 1.2rem;
+        }
+
+        .joined-contest-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-joined {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-completed {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--secondary);
+        }
+
+        .status-won {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .joined-contest-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .joined-detail {
+            text-align: center;
+        }
+
+        .joined-detail-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+
+        .joined-detail-value {
+            font-weight: 600;
+            color: var(--text);
+        }
         
         /* Responsive */
         @media (max-width: 768px) {
@@ -1124,6 +1190,9 @@
                 <button class="tab-btn active" onclick="switchTab('contests')">
                     <i class="fas fa-trophy"></i> Live Contests
                 </button>
+                <button class="tab-btn" onclick="switchTab('joinedContests')">
+                    <i class="fas fa-list"></i> Joined Contests
+                </button>
                 <button class="tab-btn" onclick="switchTab('winners')">
                     <i class="fas fa-crown"></i> Winners
                 </button>
@@ -1142,6 +1211,12 @@
             <div id="contestsTab" class="tab-content active">
                 <div class="contest-grid" id="contestGrid">
                     <!-- Contest cards will be rendered here -->
+                </div>
+            </div>
+
+            <div id="joinedContestsTab" class="tab-content">
+                <div id="joinedContestsList">
+                    <!-- Joined contests will be rendered here -->
                 </div>
             </div>
 
@@ -1316,7 +1391,13 @@
                         <span id="totalAmount">₹0</span>
                     </div>
                 </div>
-                <button class="btn btn-success btn-full" onclick="handlePayment()">
+                
+<div class="form-group">
+  <label class="form-label">Your Email (Required for payment)</label>
+  <input type="email" class="form-input" id="paymentEmail" placeholder="Enter your email" required>
+</div>
+
+<button class="btn btn-success btn-full" onclick="handlePayment()">
                     <i class="fas fa-credit-card"></i> Proceed to Payment
                 </button>
             </div>
@@ -1332,6 +1413,8 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+            <div class="modal-body">
+                <div class="upi-qr-container" id="upiQRCode">
                     <div>
                         <strong>Scan QR Code with any UPI app</strong>
                         <div class="upi-id-display" id="upiIdDisplay">smartlottery@paytm</div>
@@ -1391,6 +1474,7 @@
         let transactions = [];
         let winners = [];
         let activeContests = [];
+        let joinedContests = []; // New array to store joined contests
 
         // Admin emails
         const ADMIN_EMAILS = ['vishuu7306@gmail.com', 'admin@smartlottery.com'];
@@ -1477,6 +1561,11 @@
             { name: 'Sneha Patel', contest: 'Weekly Super Draw', prize: 120000, date: '1 day ago' },
             { name: 'Vikram Yadav', contest: 'Millionaire Maker', prize: 250000, date: '2 days ago' }
         ];
+
+        // Utility function to generate transaction ID
+        function generateTransactionId() {
+            return 'TXN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -1627,6 +1716,70 @@
             });
         }
 
+        function renderJoinedContests() {
+            const joinedContestsList = document.getElementById('joinedContestsList');
+            if (!joinedContestsList) return;
+            
+            joinedContestsList.innerHTML = '';
+
+            if (joinedContests.length === 0) {
+                joinedContestsList.innerHTML = `
+                    <div class="joined-contest-card">
+                        <div class="joined-contest-header">
+                            <div class="joined-contest-title">No contests joined yet</div>
+                        </div>
+                        <p style="color: var(--text-light); margin: 10px 0;">Join some contests to see them here!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            joinedContests.forEach(joinedContest => {
+                const contest = CONTEST_TEMPLATES.find(c => c.id === joinedContest.contestId);
+                if (!contest) return;
+
+                const joinedContestCard = document.createElement('div');
+                joinedContestCard.className = 'joined-contest-card';
+                
+                let statusClass = 'status-joined';
+                let statusText = 'Joined';
+                
+                if (joinedContest.status === 'completed') {
+                    statusClass = 'status-completed';
+                    statusText = 'Completed';
+                } else if (joinedContest.status === 'won') {
+                    statusClass = 'status-won';
+                    statusText = `Won ${joinedContest.position || ''}`;
+                }
+
+                joinedContestCard.innerHTML = `
+                    <div class="joined-contest-header">
+                        <div class="joined-contest-title">${contest.title}</div>
+                        <div class="joined-contest-status ${statusClass}">${statusText}</div>
+                    </div>
+                    <div class="joined-contest-details">
+                        <div class="joined-detail">
+                            <div class="joined-detail-label">Entry Fee</div>
+                            <div class="joined-detail-value">₹${contest.entryFee}</div>
+                        </div>
+                        <div class="joined-detail">
+                            <div class="joined-detail-label">Prize Pool</div>
+                            <div class="joined-detail-value">₹${contest.prizePool.toLocaleString()}</div>
+                        </div>
+                        <div class="joined-detail">
+                            <div class="joined-detail-label">Joined Date</div>
+                            <div class="joined-detail-value">${joinedContest.joinedDate}</div>
+                        </div>
+                        <div class="joined-detail">
+                            <div class="joined-detail-label">Prize Won</div>
+                            <div class="joined-detail-value">${joinedContest.prizeWon ? '₹' + joinedContest.prizeWon.toLocaleString() : 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+                joinedContestsList.appendChild(joinedContestCard);
+            });
+        }
+
         function getTimeRemaining(endTime) {
             const now = new Date().getTime();
             const end = new Date(endTime).getTime();
@@ -1761,6 +1914,7 @@
                     contestsWon: 0,
                     totalWinnings: 0,
                     transactions: [],
+                    joinedContests: [],
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -1798,7 +1952,14 @@
             document.getElementById('userDisplayName').textContent = user.displayName || 'Smart Player';
             document.getElementById('userAvatar').textContent = (user.displayName || 'U')[0].toUpperCase();
 
-            // Load user data from Firestore
+            // Ensure Firestore is ready
+            if (!db) {
+                console.error('❌ Firestore not initialized');
+                showNotification('Database connection failed. Please refresh the page.', 'error');
+                return;
+            }
+
+            // Load user data from Firestore with improved error handling
             try {
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (userDoc.exists) {
@@ -1809,11 +1970,30 @@
                         contestsWon: userData.contestsWon || 0,
                         totalWinnings: userData.totalWinnings || 0
                     };
-                    transactions = userData.transactions || [];
+                    
+                    // Load joined contests
+                    joinedContests = userData.joinedContests || [];
+                    
+                    // Load transactions from sub-collection first, fallback to array
+                    try {
+                        const transactionsSnapshot = await db.collection('users').doc(user.uid).collection('transactions').orderBy('timestamp', 'desc').limit(20).get();
+                        if (!transactionsSnapshot.empty) {
+                            transactions = transactionsSnapshot.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data()
+                            }));
+                        } else {
+                            transactions = userData.transactions || [];
+                        }
+                    } catch (transError) {
+                        console.log('Using fallback transactions array');
+                        transactions = userData.transactions || [];
+                    }
                     
                     document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                     updateProfileStats();
                     renderTransactions();
+                    renderJoinedContests();
                     console.log('✅ User data loaded successfully');
                 } else {
                     // Create user document if it doesn't exist
@@ -1825,17 +2005,32 @@
                         contestsWon: 0,
                         totalWinnings: 0,
                         transactions: [],
+                        joinedContests: [],
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
                     userBalance = 0;
+                    transactions = [];
+                    joinedContests = [];
                     document.getElementById('userBalance').textContent = '₹0';
+                    renderJoinedContests();
                     console.log('✅ New user document created');
                 }
             } catch (error) {
                 console.error('❌ Error loading user data:', error);
+                
+                // Check if it's a permission error
+                if (error.code === 'permission-denied') {
+                    showNotification('Database permissions error. Please check Firestore security rules.', 'error');
+                } else {
+                    showNotification('Failed to load user data. Some features may not work properly.', 'error');
+                }
+                
                 userBalance = 0;
+                transactions = [];
+                joinedContests = [];
                 document.getElementById('userBalance').textContent = '₹0';
+                renderJoinedContests();
             }
 
             renderWinners();
@@ -1854,6 +2049,7 @@
             currentUser = null;
             userBalance = 0;
             isAdmin = false;
+            joinedContests = [];
             
             // Reset UI
             document.getElementById('landingSection').style.display = 'block';
@@ -1905,108 +2101,161 @@
             }
 
             try {
+                showNotification('Joining contest...', 'success');
+                
+                const userRef = db.collection('users').doc(currentUser.uid);
+
+                // Create transaction for contest entry
+                const transaction = {
+                    id: generateTransactionId(),
+                    type: 'contest_entry',
+                    amount: -entryFee,
+                    description: `Joined contest: ${contestId}`,
+                    timestamp: new Date(),
+                    status: 'completed',
+                    contestId: contestId,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    time: new Date().toLocaleTimeString('en-IN')
+                };
+
+                // Create joined contest entry
+                const joinedContest = {
+                    contestId: contestId,
+                    joinedDate: new Date().toLocaleDateString('en-IN'),
+                    joinedTime: new Date().toLocaleTimeString('en-IN'),
+                    entryFee: entryFee,
+                    status: 'joined',
+                    prizeWon: 0,
+                    position: null
+                };
+
+                // Use a batch operation for better reliability
                 const batch = db.batch();
                 
-                // Update user balance and stats
-                const userRef = db.collection('users').doc(currentUser.uid);
                 batch.update(userRef, {
                     balance: firebase.firestore.FieldValue.increment(-entryFee),
                     contestsJoined: firebase.firestore.FieldValue.increment(1),
-                    transactions: firebase.firestore.FieldValue.arrayUnion({
-                        type: 'contest_entry',
-                        amount: -entryFee,
-                        description: `Joined contest: ${contestId}`,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: 'completed'
-                    })
+                    joinedContests: firebase.firestore.FieldValue.arrayUnion(joinedContest),
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                // Add transaction to sub-collection
+                const transactionRef = userRef.collection('transactions').doc();
+                batch.set(transactionRef, transaction);
+
+                // Commit the batch
                 await batch.commit();
 
                 // Update local state
                 userBalance -= entryFee;
                 userProfile.contestsJoined++;
+                joinedContests.unshift(joinedContest);
                 
-                transactions.unshift({
-                    type: 'contest_entry',
-                    amount: -entryFee,
-                    description: `Joined contest: ${contestId}`,
-                    date: new Date().toLocaleDateString(),
-                    status: 'completed'
-                });
+                transactions.unshift(transaction);
                 
                 document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                 updateProfileStats();
                 renderTransactions();
+                renderJoinedContests();
                 
-                showNotification('Successfully joined the contest!', 'success');
+                showNotification('✅ Successfully joined the contest!', 'success');
                 
-                // Simulate contest result for user (20% chance for 2nd, 80% for 3rd)
-                setTimeout(() => {
-                    simulateUserContestResult(contestId);
-                }, 30000); // 30 seconds for demo
-                
+// ⚠️ Contest results will be handled only when contest is fulfilled (not auto-simulated here)
+// Admin or backend process will trigger winner declaration
+
+
             } catch (error) {
                 console.error('❌ Error joining contest:', error);
-                showNotification('Failed to join contest. Please try again.', 'error');
+                
+                if (error.code === 'permission-denied') {
+                    showNotification('Permission denied. Please check your account permissions.', 'error');
+                } else {
+                    showNotification('Failed to join contest: ' + error.message, 'error');
+                }
             }
         }
 
-        async function simulateUserContestResult(contestId) {
+        async function simulateContestResult(contestId) {
             if (!currentUser) return;
-            
-            // Winning probabilities: 0% for 1st, 20% for 2nd, 80% for 3rd
-            const random = Math.random();
-            let prize = 0;
-            let position = '';
-            
+
             const contest = CONTEST_TEMPLATES.find(c => c.id === contestId);
             if (!contest) return;
-            
-            if (random < 0.20) { // 20% chance for 2nd place
-                prize = contest.prizeStructure[1].amount;
+
+            // Guarantee a win for testing - 80% chance for 3rd place, 20% for 2nd place
+            const random = Math.random();
+            let position, prize;
+
+            if (random < 0.2) {
                 position = '2nd Place';
-            } else if (random < 1.0) { // 80% chance for 3rd place  
-                prize = contest.prizeStructure[2].amount;
+                prize = contest.prizeStructure[1].amount;
+            } else {
                 position = '3rd Place';
+                prize = contest.prizeStructure[2].amount;
             }
-            
-            if (prize > 0) {
-                try {
-                    const userRef = db.collection('users').doc(currentUser.uid);
-                    await userRef.update({
-                        balance: firebase.firestore.FieldValue.increment(prize),
-                        contestsWon: firebase.firestore.FieldValue.increment(1),
-                        totalWinnings: firebase.firestore.FieldValue.increment(prize),
-                        transactions: firebase.firestore.FieldValue.arrayUnion({
-                            type: 'prize_win',
-                            amount: prize,
-                            description: `Won ${position} in ${contest.title}`,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                            status: 'completed'
-                        })
-                    });
-                    
-                    userBalance += prize;
-                    userProfile.contestsWon++;
-                    userProfile.totalWinnings += prize;
-                    
-                    transactions.unshift({
-                        type: 'prize_win',
-                        amount: prize,
-                        description: `Won ${position} in ${contest.title}`,
-                        date: new Date().toLocaleDateString(),
-                        status: 'completed'
-                    });
-                    
-                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
-                    updateProfileStats();
-                    renderTransactions();
-                    
-                    showNotification(`🎉 Congratulations! You won ${position} and ₹${prize.toLocaleString()}!`, 'success');
-                } catch (error) {
-                    console.error('❌ Error updating prize:', error);
-                }
+
+            try {
+                const userRef = db.collection('users').doc(currentUser.uid);
+                
+                const winTransaction = {
+                    id: generateTransactionId(),
+                    type: 'prize_win',
+                    amount: prize,
+                    description: `Won ${position} in ${contest.title}`,
+                    timestamp: new Date(),
+                    status: 'completed',
+                    contestId: contestId,
+                    position: position,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    time: new Date().toLocaleTimeString('en-IN')
+                };
+
+                // Update joined contest status
+                const updatedJoinedContests = joinedContests.map(jc => {
+                    if (jc.contestId === contestId && jc.status === 'joined') {
+                        return {
+                            ...jc,
+                            status: 'won',
+                            position: position,
+                            prizeWon: prize
+                        };
+                    }
+                    return jc;
+                });
+
+                // Use batch operation for reliability
+                const batch = db.batch();
+                
+                batch.update(userRef, {
+                    balance: firebase.firestore.FieldValue.increment(prize),
+                    contestsWon: firebase.firestore.FieldValue.increment(1),
+                    totalWinnings: firebase.firestore.FieldValue.increment(prize),
+                    joinedContests: updatedJoinedContests,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Add win transaction to sub-collection
+                const winTransactionRef = userRef.collection('transactions').doc();
+                batch.set(winTransactionRef, winTransaction);
+
+                await batch.commit();
+
+                // Update local state
+                userBalance += prize;
+                userProfile.contestsWon++;
+                userProfile.totalWinnings += prize;
+                joinedContests = updatedJoinedContests;
+                
+                transactions.unshift(winTransaction);
+                
+                document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                updateProfileStats();
+                renderTransactions();
+                renderJoinedContests();
+
+                showNotification(`🎉 Congratulations! You won ${position} and ₹${prize.toLocaleString()}!`, 'success');
+            } catch (error) {
+                console.error('❌ Error updating prize:', error);
+                showNotification('Error processing prize. Please contact support.', 'error');
             }
         }
 
@@ -2097,26 +2346,29 @@
             
             try {
                 const userRef = db.collection('users').doc(currentUser.uid);
+                
+                const withdrawalTransaction = {
+                    id: generateTransactionId(),
+                    type: 'withdrawal',
+                    amount: -amount,
+                    description: `Withdrawal to account ***${account.slice(-4)}`,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'processing',
+                    bankAccount: account,
+                    ifscCode: ifsc,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    time: new Date().toLocaleTimeString('en-IN')
+                };
+
                 await userRef.update({
                     balance: firebase.firestore.FieldValue.increment(-amount),
-                    transactions: firebase.firestore.FieldValue.arrayUnion({
-                        type: 'withdrawal',
-                        amount: -amount,
-                        description: `Withdrawal to account ***${account.slice(-4)}`,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: 'processing'
-                    })
+                    transactions: firebase.firestore.FieldValue.arrayUnion(withdrawalTransaction),
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
                 userBalance -= amount;
                 
-                transactions.unshift({
-                    type: 'withdrawal',
-                    amount: -amount,
-                    description: `Withdrawal to account ***${account.slice(-4)}`,
-                    date: new Date().toLocaleDateString(),
-                    status: 'processing'
-                });
+                transactions.unshift(withdrawalTransaction);
                 
                 document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                 renderTransactions();
@@ -2173,6 +2425,12 @@
         }
 
         async function handlePayment() {
+            const email = document.getElementById('paymentEmail')?.value.trim();
+            if (!email) {
+                showNotification('Please enter your email before proceeding.', 'error');
+                return;
+            }
+
             const amount = parseInt(document.getElementById('amountInput').value);
             
             if (!amount || amount < 10) {
@@ -2301,31 +2559,31 @@
 
         async function handlePaymentSuccess(amount, paymentId) {
             try {
-                // Update user balance in Firestore
                 const userRef = db.collection('users').doc(currentUser.uid);
+                
+                const paymentTransaction = {
+                    id: generateTransactionId(),
+                    type: 'money_added',
+                    amount: amount,
+                    description: `Money added via ${currentPaymentMethod.toUpperCase()}`,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    paymentId: paymentId,
+                    status: 'completed',
+                    date: new Date().toLocaleDateString('en-IN'),
+                    time: new Date().toLocaleTimeString('en-IN')
+                };
+
+                // Update user balance in Firestore
                 await userRef.update({
                     balance: firebase.firestore.FieldValue.increment(amount),
-                    transactions: firebase.firestore.FieldValue.arrayUnion({
-                        type: 'money_added',
-                        amount: amount,
-                        description: `Money added via ${currentPaymentMethod.toUpperCase()}`,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        paymentId: paymentId,
-                        status: 'completed'
-                    })
+                    transactions: firebase.firestore.FieldValue.arrayUnion(paymentTransaction),
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
                 // Update local state
                 userBalance += amount;
                 
-                transactions.unshift({
-                    type: 'money_added',
-                    amount: amount,
-                    description: `Money added via ${currentPaymentMethod.toUpperCase()}`,
-                    date: new Date().toLocaleDateString(),
-                    paymentId: paymentId,
-                    status: 'completed'
-                });
+                transactions.unshift(paymentTransaction);
 
                 document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                 renderTransactions();
