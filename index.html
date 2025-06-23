@@ -1660,8 +1660,8 @@
         // Contest templates inspired by Bhagyalakshmi lotteries
         const CONTEST_TEMPLATES = [
             {
-                id: 'bhagya_jackpot',
-                title: 'Bhagya Mega Jackpot',
+                id: 'jackpot',
+                title: 'Mega Jackpot',
                 entryFee: 50,
                 maxParticipants: 2000,
                 prizePool: 100000,
@@ -1671,7 +1671,7 @@
                     { position: '1st Prize', amount: 50000, percentage: '50%' },
                     { position: '2nd Prize', amount: 25000, percentage: '25%' },
                     { position: '3rd Prize', amount: 15000, percentage: '15%' },
-                    { position: 'Consolation (10 winners)', amount: 1000, percentage: '10%' }
+                    { position: 'Consolation (5 winners)', amount: 1000, percentage: '10%' }
                 ]
             },
             {
@@ -1686,12 +1686,12 @@
                     { position: '1st Prize', amount: 75000, percentage: '50%' },
                     { position: '2nd Prize', amount: 37500, percentage: '25%' },
                     { position: '3rd Prize', amount: 22500, percentage: '15%' },
-                    { position: 'Lucky 20 (20 winners)', amount: 750, percentage: '10%' }
+                    { position: 'Lucky 10 (10 winners)', amount: 750, percentage: '10%' }
                 ]
             },
             {
-                id: 'speed_bhagya',
-                title: 'Speed Bhagya - 30 Minutes',
+                id: 'speed_success',
+                title: 'Speed success - 60 Minutes',
                 entryFee: 25,
                 maxParticipants: 800,
                 prizePool: 20000,
@@ -1701,7 +1701,7 @@
                     { position: '1st Prize', amount: 10000, percentage: '50%' },
                     { position: '2nd Prize', amount: 5000, percentage: '25%' },
                     { position: '3rd Prize', amount: 3000, percentage: '15%' },
-                    { position: 'Special 5 (5 winners)', amount: 400, percentage: '10%' }
+                    { position: 'Special 3 (3 winners)', amount: 400, percentage: '10%' }
                 ]
             },
             {
@@ -1716,7 +1716,7 @@
                     { position: '1st Prize', amount: 120000, percentage: '50%' },
                     { position: '2nd Prize', amount: 60000, percentage: '25%' },
                     { position: '3rd Prize', amount: 36000, percentage: '15%' },
-                    { position: 'Festival Bonus (15 winners)', amount: 1600, percentage: '10%' }
+                    { position: 'Festival Bonus (10 winners)', amount: 1600, percentage: '10%' }
                 ]
             },
             {
@@ -1731,15 +1731,15 @@
                     { position: '1st Prize', amount: 250000, percentage: '50%' },
                     { position: '2nd Prize', amount: 125000, percentage: '25%' },
                     { position: '3rd Prize', amount: 75000, percentage: '15%' },
-                    { position: 'Dream Bonus (25 winners)', amount: 2000, percentage: '10%' }
+                    { position: 'Dream Bonus (15 winners)', amount: 2000, percentage: '10%' }
                 ]
             }
         ];
 
         // Sample data
         const sampleWinners = [
-            { name: 'Rajesh Kumar', contest: 'Bhagya Mega Jackpot', prize: 50000, date: '2 hours ago' },
-            { name: 'Priya Sharma', contest: 'Speed Bhagya', prize: 10000, date: '3 hours ago' },
+            { name: 'Rajesh Kumar', contest: 'Mega Jackpot', prize: 50000, date: '2 hours ago' },
+            { name: 'Priya Sharma', contest: 'Speed success', prize: 10000, date: '3 hours ago' },
             { name: 'Amit Singh', contest: 'Golden Fortune Draw', prize: 75000, date: '5 hours ago' },
             { name: 'Sneha Patel', contest: 'Festival Special Bumper', prize: 120000, date: '1 day ago' },
             { name: 'Vikram Yadav', contest: 'Crorepati Dream Lottery', prize: 250000, date: '2 days ago' }
@@ -2345,6 +2345,13 @@
                     updateProfileStats();
                     renderTransactions();
                     renderJoinedContests();
+                    
+                    // Force update profile tab if it's currently active
+                    const profileTab = document.getElementById('profileTab');
+                    if (profileTab && profileTab.classList.contains('active')) {
+                        updateProfileStats();
+                    }
+                    
                     console.log('✅ User data loaded successfully');
                 } else {
                     // Create user document if it doesn't exist
@@ -3077,7 +3084,7 @@
 
         function updatePaymentSummary() {
             const amount = parseInt(document.getElementById('amountInput').value) || 0;
-            const processingFee = Math.max(Math.round(amount * 0.02), 2); // 2% processing fee, minimum ₹2
+            const processingFee = 2); // 2% processing fee, minimum ₹2
             const total = amount + processingFee;
 
             document.getElementById('paymentAmount').textContent = '₹' + amount.toLocaleString();
@@ -3110,7 +3117,7 @@
             }
 
             const selectedUPIMethod = document.querySelector('input[name="upiMethod"]:checked').value;
-            currentPaymentAmount = amount;
+            currentPaymentAmount = amount; // Store the deposit amount (without processing fee)
             currentPaymentMethod = selectedUPIMethod;
 
             try {
@@ -3133,6 +3140,7 @@
                             },
                             body: JSON.stringify({
                                 amount: totalAmount,
+                                depositAmount: amount, // Separate deposit amount
                                 userId: currentUser.uid,
                                 userEmail: email,
                                 upiMethod: selectedUPIMethod
@@ -3246,6 +3254,7 @@
                 // Simulate payment verification delay
                 setTimeout(async () => {
                     // In production, verify payment status with payment gateway
+                    // Pass the deposit amount (currentPaymentAmount) not the total with processing fee
                     await handlePaymentSuccess(currentPaymentAmount, `upi_${Date.now()}`);
                 }, 2000);
 
@@ -3255,7 +3264,7 @@
             }
         }
 
-        async function handlePaymentSuccess(amount, paymentId) {
+        async function handlePaymentSuccess(depositAmount, paymentId) {
             try {
                 if (!currentUser) {
                     throw new Error('User not logged in');
@@ -3266,7 +3275,7 @@
                 const paymentTransaction = {
                     id: generateTransactionId(),
                     type: 'money_added',
-                    amount: amount,
+                    amount: depositAmount, // Only the deposit amount, not including processing fee
                     description: `Money added via ${currentPaymentMethod.toUpperCase()}`,
                     timestamp: new Date(),
                     paymentId: paymentId || `manual_${Date.now()}`,
@@ -3282,7 +3291,7 @@
                 const batch = db.batch();
 
                 batch.update(userRef, {
-                    balance: firebase.firestore.FieldValue.increment(amount),
+                    balance: firebase.firestore.FieldValue.increment(depositAmount), // Only add deposit amount
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -3292,13 +3301,29 @@
 
                 await batch.commit();
 
-                // Update local state
-                userBalance += amount;
+                // Update local state with deposit amount only
+                userBalance += depositAmount;
 
                 transactions.unshift(paymentTransaction);
 
                 document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                 renderTransactions();
+
+                // Refresh user data from Firestore to ensure profile is updated
+                const updatedUserDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (updatedUserDoc.exists) {
+                    const updatedUserData = updatedUserDoc.data();
+                    userBalance = updatedUserData.balance || userBalance;
+                    userProfile = {
+                        contestsJoined: updatedUserData.contestsJoined || 0,
+                        contestsWon: updatedUserData.contestsWon || 0,
+                        totalWinnings: updatedUserData.totalWinnings || 0
+                    };
+                    
+                    // Update all UI elements
+                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                    updateProfileStats();
+                }
 
                 // Clear form
                 document.getElementById('amountInput').value = '';
@@ -3309,7 +3334,7 @@
                 closeModal('addMoneyModal');
                 closeModal('upiPaymentModal');
 
-                showNotification(`✅ Payment verified! ₹${amount.toLocaleString()} added to your wallet.`, 'success');
+                showNotification(`✅ Payment verified! ₹${depositAmount.toLocaleString()} added to your wallet.`, 'success');
 
             } catch (error) {
                 console.error('❌ Error processing payment success:', error);
