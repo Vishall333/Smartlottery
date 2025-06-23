@@ -1193,7 +1193,7 @@
 
                     <div class="terms-container">
                         <h3>1. Platform Overview</h3>
-                        <p>Smart Lottery Pro is a digital lottery platform licensed under the Information Technology Act, 2000 and operates in compliance with applicable Indian laws. Our platform provides fair, transparent, and secure lottery services to users across India.</p>
+                        <p>Smart Lottery Pro is a digital lottery platform works as per the Information Technology Act, 2000 and operates in compliance with applicable Indian laws. Our platform provides fair, transparent, and secure lottery services to users across India.</p>
 
                         <h3>2. Eligibility</h3>
                         <p>You must be at least 18 years old and a legal resident of India to participate. Participation is prohibited in states where online lotteries are banned. By registering, you confirm your eligibility and legal capacity to enter into this agreement.</p>
@@ -1208,7 +1208,7 @@
                         <p>All lottery draws use certified random number generation systems. Results are transparent and verifiable. No manipulation or fraud is tolerated. Winners are selected based purely on chance and luck.</p>
 
                         <h3>6. Taxation</h3>
-                        <p>Winners are responsible for applicable taxes as per Indian Income Tax laws. TDS will be deducted for winnings above ₹10,000 as per government regulations. We provide necessary tax certificates.</p>
+                        <p>Winners are responsible for applicable taxes as per Indian Income Tax laws. TDS will be deducted for winnings above ₹1,00,000 as per government regulations. We provide necessary tax certificates.</p>
 
                         <h3>7. Responsible Gaming</h3>
                         <p>We promote responsible gaming. Please play within your means. If you feel you have a gambling problem, please seek help. We reserve the right to suspend accounts showing signs of problem gambling.</p>
@@ -1626,8 +1626,7 @@
         };
 
         // API Configuration for Firebase Functions
-        const API_BASE_URL = 'https://us-central1-smart-lottery-b08c5.cloudfunctions.net/api';
-
+        const API_BASE_URL = 'https://api-2uuq6sr6qa-uc.a.run.app';
         // UPI Configuration
         const UPI_CONFIG = {
             merchantId: 'smartlottery@paytm',
@@ -1655,12 +1654,12 @@
         let pendingUserData = null; // Store user data during email verification
 
         // Admin emails
-        const ADMIN_EMAILS = ['vishuu7306@gmail.com', 'admin@smartlottery.com'];
+        const ADMIN_EMAILS = ['vishuu7306@gmail.com'];
 
         // Contest templates inspired by Bhagyalakshmi lotteries
         const CONTEST_TEMPLATES = [
             {
-                id: 'jackpot',
+                id: 'Easy_jackpot',
                 title: 'Mega Jackpot',
                 entryFee: 50,
                 maxParticipants: 2000,
@@ -1690,8 +1689,8 @@
                 ]
             },
             {
-                id: 'speed_success',
-                title: 'Speed success - 60 Minutes',
+                id: 'speed_Earning',
+                title: 'Speed Earning - 60 Minutes',
                 entryFee: 25,
                 maxParticipants: 800,
                 prizePool: 20000,
@@ -1739,7 +1738,7 @@
         // Sample data
         const sampleWinners = [
             { name: 'Rajesh Kumar', contest: 'Mega Jackpot', prize: 50000, date: '2 hours ago' },
-            { name: 'Priya Sharma', contest: 'Speed success', prize: 10000, date: '3 hours ago' },
+            { name: 'Priya Sharma', contest: 'Speed Earning', prize: 10000, date: '3 hours ago' },
             { name: 'Amit Singh', contest: 'Golden Fortune Draw', prize: 75000, date: '5 hours ago' },
             { name: 'Sneha Patel', contest: 'Festival Special Bumper', prize: 120000, date: '1 day ago' },
             { name: 'Vikram Yadav', contest: 'Crorepati Dream Lottery', prize: 250000, date: '2 days ago' }
@@ -2801,6 +2800,16 @@
         function renderAdminContests() {
             if (!isAdmin) {
                 console.log('User is not admin, skipping admin contests render');
+                const adminContestsList = document.getElementById('adminContestsList');
+                if (adminContestsList) {
+                    adminContestsList.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--error);">
+                            <i class="fas fa-ban" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                            <h3>Access Denied</h3>
+                            <p>You don't have admin permissions to access this section.</p>
+                        </div>
+                    `;
+                }
                 return;
             }
 
@@ -2813,123 +2822,214 @@
             console.log('Rendering admin contests, total contests:', activeContests.length);
             adminContestsList.innerHTML = '';
 
-            if (activeContests.length === 0) {
-                adminContestsList.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: var(--text-light);">
-                        <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
-                        <h3>No Active Contests</h3>
-                        <p>Create a new contest to get started</p>
+            // Add admin dashboard header
+            const adminHeader = document.createElement('div');
+            adminHeader.style.marginBottom = '30px';
+            adminHeader.style.padding = '25px';
+            adminHeader.style.background = 'linear-gradient(135deg, var(--primary), var(--accent))';
+            adminHeader.style.borderRadius = 'var(--radius-lg)';
+            adminHeader.style.color = 'white';
+            adminHeader.style.textAlign = 'center';
+            adminHeader.innerHTML = `
+                <h2 style="margin: 0 0 10px 0; font-size: 1.8rem;">
+                    <i class="fas fa-crown" style="margin-right: 10px;"></i>
+                    Admin Dashboard
+                </h2>
+                <p style="margin: 0; opacity: 0.9;">Manage contests, declare winners, and oversee lottery operations</p>
+            `;
+            adminContestsList.appendChild(adminHeader);
+
+            // Add quick stats
+            const quickStats = document.createElement('div');
+            quickStats.style.marginBottom = '30px';
+            quickStats.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <div style="background: var(--surface); padding: 20px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--primary);">${activeContests.length}</div>
+                        <div style="color: var(--text-light);">Active Contests</div>
                     </div>
+                    <div style="background: var(--surface); padding: 20px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--success);">${activeContests.reduce((sum, c) => sum + c.currentParticipants, 0)}</div>
+                        <div style="color: var(--text-light);">Total Participants</div>
+                    </div>
+                    <div style="background: var(--surface); padding: 20px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--warning);">₹${activeContests.reduce((sum, c) => sum + c.prizePool, 0).toLocaleString()}</div>
+                        <div style="color: var(--text-light);">Total Prize Pool</div>
+                    </div>
+                    <div style="background: var(--surface); padding: 20px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow);">
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--error);">${activeContests.filter(c => c.status === 'ready_for_declaration' || c.currentParticipants >= c.maxParticipants).length}</div>
+                        <div style="color: var(--text-light);">Ready for Results</div>
+                    </div>
+                </div>
+            `;
+            adminContestsList.appendChild(quickStats);
+
+            if (activeContests.length === 0) {
+                const noContests = document.createElement('div');
+                noContests.style.textAlign = 'center';
+                noContests.style.padding = '40px';
+                noContests.style.background = 'var(--surface)';
+                noContests.style.borderRadius = 'var(--radius-lg)';
+                noContests.style.boxShadow = 'var(--shadow)';
+                noContests.innerHTML = `
+                    <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3; color: var(--text-light);"></i>
+                    <h3 style="color: var(--text); margin-bottom: 10px;">No Active Contests</h3>
+                    <p style="color: var(--text-light); margin-bottom: 20px;">Create your first contest to get started with the lottery system</p>
+                    <button class="btn btn-primary" onclick="createNewContest()">
+                        <i class="fas fa-plus"></i> Create First Contest
+                    </button>
                 `;
+                adminContestsList.appendChild(noContests);
                 return;
             }
 
             // Show all contests with comprehensive admin information
             activeContests.forEach(contest => {
                 const contestItem = document.createElement('div');
-                contestItem.className = 'data-item';
-                contestItem.style.marginBottom = '20px';
-                contestItem.style.padding = '25px';
+                contestItem.className = 'contest-admin-card';
+                contestItem.style.marginBottom = '25px';
+                contestItem.style.padding = '30px';
                 contestItem.style.border = '2px solid var(--border)';
                 contestItem.style.borderRadius = 'var(--radius-lg)';
                 contestItem.style.background = 'var(--surface)';
+                contestItem.style.boxShadow = 'var(--shadow)';
 
                 const timeRemaining = getTimeRemaining(contest.endTime);
                 const progressPercentage = Math.min((contest.currentParticipants / contest.maxParticipants) * 100, 100);
-                const canDeclareResult = contest.status === 'ready_for_declaration' || 
-                                       contest.currentParticipants >= contest.maxParticipants ||
-                                       new Date() >= new Date(contest.endTime);
+                const canDeclareResult = contest.status !== 'completed' && (
+                    contest.status === 'ready_for_declaration' || 
+                    contest.currentParticipants >= contest.maxParticipants ||
+                    new Date() >= new Date(contest.endTime)
+                );
+
+                const statusColor = contest.status === 'active' ? 'var(--success)' : 
+                                  contest.status === 'completed' ? 'var(--secondary)' : 'var(--warning)';
 
                 contestItem.innerHTML = `
-                    <div style="margin-bottom: 20px;">
-                        <div class="data-item-title" style="font-size: 1.3rem; margin-bottom: 10px;">
-                            <i class="fas fa-trophy" style="color: var(--primary); margin-right: 10px;"></i>
-                            ${contest.title}
+                    <div style="margin-bottom: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div class="data-item-title" style="font-size: 1.4rem; margin: 0; flex: 1;">
+                                <i class="fas fa-trophy" style="color: var(--primary); margin-right: 10px;"></i>
+                                ${contest.title}
+                            </div>
+                            <div style="padding: 6px 12px; background: ${statusColor}; color: white; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">
+                                ${contest.status || 'Active'}
+                            </div>
                         </div>
-                        <div class="data-item-subtitle" style="margin-bottom: 15px;">
-                            Contest ID: ${contest.id} • Entry Fee: ₹${contest.entryFee} • Prize Pool: ₹${contest.prizePool.toLocaleString()}
+                        
+                        <div class="data-item-subtitle" style="margin-bottom: 20px; font-size: 1rem;">
+                            <strong>Contest ID:</strong> ${contest.id} • 
+                            <strong>Entry Fee:</strong> ₹${contest.entryFee} • 
+                            <strong>Prize Pool:</strong> ₹${contest.prizePool.toLocaleString()}
                         </div>
 
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div style="background: var(--background); padding: 15px; border-radius: var(--radius); text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">${contest.currentParticipants}</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <div style="background: var(--background); padding: 18px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 5px;">${contest.currentParticipants}</div>
                                 <div style="font-size: 0.9rem; color: var(--text-light);">Current Participants</div>
                             </div>
-                            <div style="background: var(--background); padding: 15px; border-radius: var(--radius); text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">${contest.maxParticipants}</div>
+                            <div style="background: var(--background); padding: 18px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 5px;">${contest.maxParticipants}</div>
                                 <div style="font-size: 0.9rem; color: var(--text-light);">Max Participants</div>
                             </div>
-                            <div style="background: var(--background); padding: 15px; border-radius: var(--radius); text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">${Math.round(progressPercentage)}%</div>
+                            <div style="background: var(--background); padding: 18px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: var(--success); margin-bottom: 5px;">${Math.round(progressPercentage)}%</div>
                                 <div style="font-size: 0.9rem; color: var(--text-light);">Filled</div>
                             </div>
-                            <div style="background: var(--background); padding: 15px; border-radius: var(--radius); text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">${timeRemaining}</div>
+                            <div style="background: var(--background); padding: 18px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: ${timeRemaining === 'Ended' ? 'var(--error)' : 'var(--warning)'}; margin-bottom: 5px;">${timeRemaining}</div>
                                 <div style="font-size: 0.9rem; color: var(--text-light);">Time Left</div>
                             </div>
                         </div>
 
-                        <div style="background: var(--background); padding: 15px; border-radius: var(--radius); margin-bottom: 20px;">
-                            <div style="font-weight: 600; margin-bottom: 10px;">Prize Distribution:</div>
+                        <div style="background: var(--background); padding: 20px; border-radius: var(--radius); margin-bottom: 25px; border: 1px solid var(--border);">
+                            <div style="font-weight: 600; margin-bottom: 15px; color: var(--primary); font-size: 1.1rem;">
+                                <i class="fas fa-gift" style="margin-right: 8px;"></i>Prize Distribution:
+                            </div>
                             ${contest.prizeStructure.map(prize => `
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                    <span>${prize.position}</span>
-                                    <span style="font-weight: 600; color: var(--success);">₹${prize.amount.toLocaleString()}</span>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span style="font-weight: 500;">${prize.position}</span>
+                                    <span style="font-weight: 700; color: var(--success);">₹${prize.amount.toLocaleString()}</span>
                                 </div>
                             `).join('')}
                         </div>
 
-                        <div style="margin-bottom: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span><strong>Contest Status:</strong> <span style="color: ${contest.status === 'active' ? 'var(--success)' : 'var(--warning)'}; font-weight: 600;">${contest.status || 'active'}</span></span>
-                                <span><strong>End Time:</strong> ${new Date(contest.endTime).toLocaleString('en-IN')}</span>
+                        <div style="margin-bottom: 25px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <span style="font-weight: 600;"><i class="fas fa-info-circle" style="margin-right: 5px; color: var(--primary);"></i>Contest Details:</span>
+                                <span style="font-size: 0.9rem; color: var(--text-light);"><strong>End Time:</strong> ${new Date(contest.endTime).toLocaleString('en-IN')}</span>
                             </div>
-                            <div class="progress-bar" style="height: 8px;">
-                                <div class="progress-fill" style="width: ${progressPercentage}%; background: var(--primary);"></div>
+                            <div class="progress-bar" style="height: 12px; margin-bottom: 10px;">
+                                <div class="progress-fill" style="width: ${progressPercentage}%; background: linear-gradient(90deg, var(--success), var(--primary));"></div>
+                            </div>
+                            <div style="font-size: 0.9rem; color: var(--text-light); text-align: center;">
+                                ${contest.currentParticipants} of ${contest.maxParticipants} participants joined
                             </div>
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="declareContestResults('${contest.id}')" 
-                                ${!canDeclareResult || contest.status === 'completed' ? 'disabled' : ''}>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding-top: 20px; border-top: 2px solid var(--border);">
+                        <button class="btn ${canDeclareResult ? 'btn-primary' : 'btn-secondary'}" 
+                                onclick="adminDeclareResults('${contest.id}')" 
+                                ${!canDeclareResult ? 'disabled' : ''}
+                                style="flex: 1; min-width: 160px;">
                             <i class="fas fa-trophy"></i> 
-                            ${contest.status === 'completed' ? 'Results Declared' : 'Declare Results'}
+                            ${contest.status === 'completed' ? 'Results Declared' : 'Declare Winners'}
                         </button>
 
-                        <button class="btn btn-outline" onclick="viewContestParticipants('${contest.id}')">
+                        <button class="btn btn-outline" onclick="viewContestParticipants('${contest.id}')" style="flex: 1; min-width: 140px;">
                             <i class="fas fa-users"></i> View Participants
                         </button>
 
-                        <button class="btn btn-secondary" onclick="editContest('${contest.id}')">
-                            <i class="fas fa-edit"></i> Edit Contest
+                        <button class="btn btn-outline" onclick="editContestDetails('${contest.id}')" style="flex: 1; min-width: 120px;">
+                            <i class="fas fa-edit"></i> Edit
                         </button>
 
                         ${contest.status === 'active' ? `
-                            <button class="btn btn-outline" onclick="pauseContest('${contest.id}')" style="border-color: var(--warning); color: var(--warning);">
-                                <i class="fas fa-pause"></i> Pause Contest
+                            <button class="btn btn-outline" onclick="pauseContest('${contest.id}')" 
+                                    style="border-color: var(--warning); color: var(--warning); min-width: 120px;">
+                                <i class="fas fa-pause"></i> Pause
                             </button>
                         ` : ''}
+
+                        <button class="btn btn-outline" onclick="forceEndContest('${contest.id}')" 
+                                style="border-color: var(--error); color: var(--error); min-width: 120px;"
+                                ${contest.status === 'completed' ? 'disabled' : ''}>
+                            <i class="fas fa-stop"></i> Force End
+                        </button>
                     </div>
                 `;
                 adminContestsList.appendChild(contestItem);
             });
 
-            // Add contest creation section
-            const createContestSection = document.createElement('div');
-            createContestSection.style.marginTop = '30px';
-            createContestSection.style.padding = '25px';
-            createContestSection.style.background = 'var(--background)';
-            createContestSection.style.borderRadius = 'var(--radius-lg)';
-            createContestSection.innerHTML = `
-                <h3 style="margin-bottom: 20px; color: var(--primary);">
-                    <i class="fas fa-plus-circle"></i> Create New Contest
+            // Add contest management section
+            const managementSection = document.createElement('div');
+            managementSection.style.marginTop = '40px';
+            managementSection.style.padding = '30px';
+            managementSection.style.background = 'var(--surface)';
+            managementSection.style.borderRadius = 'var(--radius-lg)';
+            managementSection.style.boxShadow = 'var(--shadow)';
+            managementSection.style.border = '2px dashed var(--primary)';
+            managementSection.innerHTML = `
+                <h3 style="margin-bottom: 20px; color: var(--primary); text-align: center; font-size: 1.5rem;">
+                    <i class="fas fa-plus-circle"></i> Contest Management
                 </h3>
-                <button class="btn btn-success" onclick="openCreateContestModal()">
-                    <i class="fas fa-plus"></i> Create Contest
-                </button>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <button class="btn btn-success" onclick="createNewContest()" style="padding: 20px;">
+                        <i class="fas fa-plus"></i> Create New Contest
+                    </button>
+                    <button class="btn btn-primary" onclick="manageAllContests()" style="padding: 20px;">
+                        <i class="fas fa-cogs"></i> Manage All Contests
+                    </button>
+                    <button class="btn btn-outline" onclick="exportContestData()" style="padding: 20px;">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="adminSettings()" style="padding: 20px;">
+                        <i class="fas fa-tools"></i> Admin Settings
+                    </button>
+                </div>
             `;
-            adminContestsList.appendChild(createContestSection);
+            adminContestsList.appendChild(managementSection);
         }
 
         function renderTransactions() {
@@ -3084,7 +3184,7 @@
 
         function updatePaymentSummary() {
             const amount = parseInt(document.getElementById('amountInput').value) || 0;
-            const processingFee = 2); // 2% processing fee, minimum ₹2
+            const processingFee = Math.max(Math.round(amount * 0.02), 2)
             const total = amount + processingFee;
 
             document.getElementById('paymentAmount').textContent = '₹' + amount.toLocaleString();
@@ -3362,30 +3462,393 @@
             }, 5000);
         }
 
-        // Admin helper functions
-        function viewContestParticipants(contestId) {
-            showNotification('Viewing participants for contest: ' + contestId, 'success');
-            // In production, this would open a modal showing all participants
-            console.log('View participants for contest:', contestId);
-        }
+        // Enhanced Admin Functions
+        async function adminDeclareResults(contestId) {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
 
-        function editContest(contestId) {
-            showNotification('Edit contest feature coming soon!', 'success');
-            console.log('Edit contest:', contestId);
-        }
+            if (!confirm('Are you sure you want to declare results for this contest? This action cannot be undone.')) {
+                return;
+            }
 
-        function pauseContest(contestId) {
-            const contest = activeContests.find(c => c.id === contestId);
-            if (contest) {
-                contest.status = 'paused';
+            try {
+                showNotification('Declaring contest results...', 'success');
+                await declareContestResults(contestId);
+                showNotification('Contest results declared successfully!', 'success');
                 renderAdminContests();
-                showNotification('Contest paused successfully!', 'success');
+            } catch (error) {
+                console.error('Error in admin declare results:', error);
+                showNotification('Failed to declare results. Please try again.', 'error');
             }
         }
 
-        function openCreateContestModal() {
-            showNotification('Create contest feature coming soon!', 'success');
-            console.log('Create new contest modal');
+        async function viewContestParticipants(contestId) {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Loading participants...', 'success');
+                
+                const contest = CONTEST_TEMPLATES.find(c => c.id === contestId);
+                if (!contest) {
+                    showNotification('Contest not found', 'error');
+                    return;
+                }
+
+                // Get all participants for this contest from Firestore
+                const usersSnapshot = await db.collection('users').get();
+                const participants = [];
+
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const userJoinedContests = userData.joinedContests || [];
+                    const contestEntry = userJoinedContests.find(jc => jc.contestId === contestId);
+
+                    if (contestEntry) {
+                        participants.push({
+                            uid: doc.id,
+                            displayName: userData.displayName || 'Unknown User',
+                            email: userData.email || 'No email',
+                            joinedDate: contestEntry.joinedDate || 'Unknown',
+                            joinedTime: contestEntry.joinedTime || 'Unknown',
+                            status: contestEntry.status || 'joined',
+                            prizeWon: contestEntry.prizeWon || 0,
+                            position: contestEntry.position || null
+                        });
+                    }
+                });
+
+                // Create participants modal
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'block';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h2>Contest Participants - ${contest.title}</h2>
+                            <button class="modal-close" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="margin-bottom: 20px; padding: 15px; background: var(--background); border-radius: var(--radius);">
+                                <strong>Total Participants: ${participants.length}</strong>
+                            </div>
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                ${participants.length === 0 ? 
+                                    '<p style="text-align: center; color: var(--text-light); padding: 40px;">No participants yet</p>' :
+                                    participants.map((participant, index) => `
+                                        <div style="padding: 15px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; background: var(--surface);">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <div style="font-weight: 600; color: var(--text);">${index + 1}. ${participant.displayName}</div>
+                                                    <div style="font-size: 0.9rem; color: var(--text-light);">${participant.email}</div>
+                                                    <div style="font-size: 0.85rem; color: var(--text-light);">Joined: ${participant.joinedDate} at ${participant.joinedTime}</div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <div style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; 
+                                                                background: ${participant.status === 'won' ? 'rgba(245, 158, 11, 0.1)' : 
+                                                                           participant.status === 'completed' ? 'rgba(100, 116, 139, 0.1)' : 'rgba(16, 185, 129, 0.1)'};
+                                                                color: ${participant.status === 'won' ? 'var(--warning)' : 
+                                                                        participant.status === 'completed' ? 'var(--secondary)' : 'var(--success)'};">
+                                                        ${participant.status === 'won' ? `Won ${participant.position}` : 
+                                                          participant.status === 'completed' ? 'No Prize' : 'Active'}
+                                                    </div>
+                                                    ${participant.prizeWon > 0 ? `<div style="font-size: 0.9rem; color: var(--success); font-weight: 600; margin-top: 5px;">₹${participant.prizeWon.toLocaleString()}</div>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                showNotification(`Loaded ${participants.length} participants`, 'success');
+
+            } catch (error) {
+                console.error('Error viewing participants:', error);
+                showNotification('Failed to load participants', 'error');
+            }
+        }
+
+        function editContestDetails(contestId) {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) {
+                showNotification('Contest not found', 'error');
+                return;
+            }
+
+            if (contest.status === 'completed') {
+                showNotification('Cannot edit completed contest', 'error');
+                return;
+            }
+
+            // Create edit modal
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Edit Contest - ${contest.title}</h2>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">Contest Title</label>
+                            <input type="text" class="form-input" id="editContestTitle" value="${contest.title}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Entry Fee (₹)</label>
+                            <input type="number" class="form-input" id="editEntryFee" value="${contest.entryFee}" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Participants</label>
+                            <input type="number" class="form-input" id="editMaxParticipants" value="${contest.maxParticipants}" min="${contest.currentParticipants}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prize Pool (₹)</label>
+                            <input type="number" class="form-input" id="editPrizePool" value="${contest.prizePool}" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Time</label>
+                            <input type="datetime-local" class="form-input" id="editEndTime" 
+                                   value="${new Date(contest.endTime).toISOString().slice(0, -8)}">
+                        </div>
+                        <button class="btn btn-primary btn-full" onclick="saveContestChanges('${contestId}')">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function saveContestChanges(contestId) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            const title = document.getElementById('editContestTitle').value.trim();
+            const entryFee = parseInt(document.getElementById('editEntryFee').value);
+            const maxParticipants = parseInt(document.getElementById('editMaxParticipants').value);
+            const prizePool = parseInt(document.getElementById('editPrizePool').value);
+            const endTime = new Date(document.getElementById('editEndTime').value);
+
+            if (!title || !entryFee || !maxParticipants || !prizePool || !endTime) {
+                showNotification('Please fill all fields correctly', 'error');
+                return;
+            }
+
+            if (maxParticipants < contest.currentParticipants) {
+                showNotification('Max participants cannot be less than current participants', 'error');
+                return;
+            }
+
+            // Update contest
+            contest.title = title;
+            contest.entryFee = entryFee;
+            contest.maxParticipants = maxParticipants;
+            contest.prizePool = prizePool;
+            contest.endTime = endTime;
+
+            // Recalculate prize structure proportionally
+            const totalPrize = prizePool;
+            contest.prizeStructure = [
+                { position: '1st Prize', amount: Math.floor(totalPrize * 0.5), percentage: '50%' },
+                { position: '2nd Prize', amount: Math.floor(totalPrize * 0.25), percentage: '25%' },
+                { position: '3rd Prize', amount: Math.floor(totalPrize * 0.15), percentage: '15%' },
+                { position: 'Consolation (10 winners)', amount: Math.floor(totalPrize * 0.1 / 10), percentage: '10%' }
+            ];
+
+            document.querySelector('.modal').remove();
+            renderAdminContests();
+            showNotification('Contest updated successfully!', 'success');
+        }
+
+        function pauseContest(contestId) {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            const contest = activeContests.find(c => c.id === contestId);
+            if (contest) {
+                contest.status = contest.status === 'paused' ? 'active' : 'paused';
+                renderAdminContests();
+                showNotification(`Contest ${contest.status === 'paused' ? 'paused' : 'resumed'} successfully!`, 'success');
+            }
+        }
+
+        function forceEndContest(contestId) {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to force end this contest? This will allow result declaration immediately.')) {
+                return;
+            }
+
+            const contest = activeContests.find(c => c.id === contestId);
+            if (contest && contest.status !== 'completed') {
+                contest.status = 'ready_for_declaration';
+                contest.endTime = new Date(); // Set end time to now
+                renderAdminContests();
+                showNotification('Contest force-ended. You can now declare results.', 'success');
+            }
+        }
+
+        function createNewContest() {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            // Create new contest modal
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Create New Contest</h2>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">Contest Title</label>
+                            <input type="text" class="form-input" id="newContestTitle" placeholder="Enter contest name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Entry Fee (₹)</label>
+                            <input type="number" class="form-input" id="newEntryFee" placeholder="Enter entry fee" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Participants</label>
+                            <input type="number" class="form-input" id="newMaxParticipants" placeholder="Enter max participants" min="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prize Pool (₹)</label>
+                            <input type="number" class="form-input" id="newPrizePool" placeholder="Enter total prize pool" min="100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contest Duration (hours)</label>
+                            <input type="number" class="form-input" id="newDuration" placeholder="Enter duration in hours" min="1" max="168">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-input" id="newDescription" placeholder="Enter contest description" rows="3"></textarea>
+                        </div>
+                        <button class="btn btn-success btn-full" onclick="saveNewContest()">
+                            <i class="fas fa-plus"></i> Create Contest
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function saveNewContest() {
+            const title = document.getElementById('newContestTitle').value.trim();
+            const entryFee = parseInt(document.getElementById('newEntryFee').value);
+            const maxParticipants = parseInt(document.getElementById('newMaxParticipants').value);
+            const prizePool = parseInt(document.getElementById('newPrizePool').value);
+            const duration = parseInt(document.getElementById('newDuration').value);
+            const description = document.getElementById('newDescription').value.trim();
+
+            if (!title || !entryFee || !maxParticipants || !prizePool || !duration) {
+                showNotification('Please fill all required fields', 'error');
+                return;
+            }
+
+            // Generate new contest
+            const newContest = {
+                id: 'custom_' + Date.now(),
+                title: title,
+                entryFee: entryFee,
+                maxParticipants: maxParticipants,
+                prizePool: prizePool,
+                duration: duration * 60 * 60 * 1000, // Convert hours to milliseconds
+                description: description || 'Custom contest created by admin',
+                currentParticipants: 0,
+                endTime: new Date(Date.now() + (duration * 60 * 60 * 1000)),
+                status: 'active',
+                participants: [],
+                createdAt: new Date(),
+                isActive: true,
+                prizeStructure: [
+                    { position: '1st Prize', amount: Math.floor(prizePool * 0.5), percentage: '50%' },
+                    { position: '2nd Prize', amount: Math.floor(prizePool * 0.25), percentage: '25%' },
+                    { position: '3rd Prize', amount: Math.floor(prizePool * 0.15), percentage: '15%' },
+                    { position: 'Consolation (10 winners)', amount: Math.floor(prizePool * 0.1 / 10), percentage: '10%' }
+                ]
+            };
+
+            activeContests.unshift(newContest);
+            document.querySelector('.modal').remove();
+            renderContests(activeContests);
+            renderAdminContests();
+            showNotification('New contest created successfully!', 'success');
+        }
+
+        function manageAllContests() {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            showNotification('Contest management dashboard coming soon!', 'success');
+        }
+
+        function exportContestData() {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            const data = {
+                contests: activeContests,
+                timestamp: new Date().toISOString(),
+                totalContests: activeContests.length,
+                totalParticipants: activeContests.reduce((sum, c) => sum + c.currentParticipants, 0)
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lottery_data_${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showNotification('Contest data exported successfully!', 'success');
+        }
+
+        function adminSettings() {
+            if (!isAdmin) {
+                showNotification('Access denied: Admin privileges required', 'error');
+                return;
+            }
+
+            showNotification('Admin settings panel coming soon!', 'success');
         }
 
         // Close modals when clicking outside
