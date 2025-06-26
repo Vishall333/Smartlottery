@@ -10,7 +10,136 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Firebase SDK v9 -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+async function fetchWithdrawalHistory() {
+    if (!currentUser) return;
+    try {
+        // First try to get withdrawals from user's transactions
+        const userRef = db.collection('users').doc(currentUser.uid);
+        const transactionsSnapshot = await userRef.collection('transactions')
+            .where('type', '==', 'withdrawal')
+            .orderBy('timestamp', 'desc')
+            .get();
+
+        let withdrawals = [];
+        if (!transactionsSnapshot.empty) {
+            withdrawals = transactionsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    timestamp: data.timestamp && data.timestamp.toDate ? data.timestamp.toDate() : data.timestamp
+                };
+            });
+        }
+
+        // Also check pending withdrawals collection
+        const pendingSnapshot = await db
+            .collection('pendingWithdrawals')
+            .where('userId', '==', currentUser.uid)
+            .orderBy('requestedAt', 'desc')
+            .get();
+
+        if (!pendingSnapshot.empty) {
+            const pendingWithdrawals = pendingSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    type: 'withdrawal',
+                    amount: -Math.abs(data.amount),
+                    description: data.description || `Withdrawal request - ${data.method || 'Bank'}`,
+                    status: data.approvalStatus || 'pending_approval',
+                    date: data.date,
+                    time: data.time,
+                    timestamp: data.requestedAt,
+                    method: data.method,
+                    upiId: data.upiId,
+                    bankAccount: data.bankAccount,
+                    ifscCode: data.ifscCode,
+                    accountName: data.accountName
+                };
+            });
+
+            // Merge with existing withdrawals, avoiding duplicates
+            pendingWithdrawals.forEach(pw => {
+                const exists = withdrawals.find(w => w.id === pw.id);
+                if (!exists) {
+                    withdrawals.unshift(pw);
+                }
+            });
+        }
+
+        withdrawalHistory = withdrawals;
+        renderWithdrawalHistory();
+    } catch (err) {
+        console.error('Error fetching withdrawal history:', err);
+        // Fallback to transactions array
+        withdrawalHistory = transactions.filter(t => t.type === 'withdrawal');
+        renderWithdrawalHistory();
+    }
+}
+
+function renderWithdrawalHistory() {
+    const container = document.getElementById('withdrawalHistory');
+    if (!container) return;
+    
+    container.innerHTML = '';
+
+    if (withdrawalHistory.length === 0) {
+        container.innerHTML = `<div class="data-item"><div class="data-item-info"><div class="data-item-title">No withdrawals found.</div></div></div>`;
+        return;
+    }
+
+    withdrawalHistory.forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'data-item';
+        
+        let statusClass = '';
+        let statusText = '';
+
+        switch (entry.status) {
+            case 'pending_approval':
+                statusClass = 'pending';
+                statusText = 'Pending Approval';
+                break;
+            case 'approved':
+                statusClass = 'approved';
+                statusText = 'Approved';
+                break;
+            case 'processing':
+                statusClass = 'processing';
+                statusText = 'Processing';
+                break;
+            case 'completed':
+                statusClass = 'verified';
+                statusText = 'Completed';
+                break;
+            case 'rejected':
+                statusClass = 'rejected';
+                statusText = 'Rejected';
+                break;
+            default:
+                statusClass = 'pending';
+                statusText = entry.status || 'Processing';
+        }
+
+        const statusBadge = `<span class="payment-verification-badge ${statusClass}">${statusText}</span>`;
+
+        item.innerHTML = `
+            <div class="data-item-info">
+                <div class="data-item-title">₹${Math.abs(entry.amount).toLocaleString()} - ${(entry.method || 'Bank').toUpperCase()}${statusBadge}</div>
+                <div class="data-item-subtitle">${entry.description || 'Withdrawal request'}</div>
+                <div class="data-item-subtitle">${entry.date || 'Recent'} • ${entry.time || ''}</div>
+            </div>
+            <div class="data-item-value transaction-amount negative">
+                -₹${Math.abs(entry.amount).toLocaleString()}
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+</script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
@@ -1446,25 +1575,15 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Select Withdrawal Method</label>
+                        <label class="form-label">Withdrawal Method</label>
                         <div class="upi-options">
-                            <div class="upi-option selected" onclick="selectWithdrawalMethod('bank')">
-                                <input type="radio" name="withdrawalMethod" value="bank" checked>
+                            <div class="upi-option selected">
+                                <input type="radio" name="withdrawalMethod" value="netbanking" checked>
                                 <div class="upi-option-content">
                                     <i class="fas fa-university upi-option-icon" style="color: #007bff;"></i>
                                     <div class="upi-option-text">
-                                        <div class="upi-option-name">Bank Transfer</div>
-                                        <div class="upi-option-desc">Transfer to bank account via IMPS/NEFT</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="upi-option" onclick="selectWithdrawalMethod('upi')">
-                                <input type="radio" name="withdrawalMethod" value="upi">
-                                <div class="upi-option-content">
-                                    <i class="fas fa-mobile-alt upi-option-icon" style="color: #5f2c8e;"></i>
-                                    <div class="upi-option-text">
-                                        <div class="upi-option-name">UPI Transfer</div>
-                                        <div class="upi-option-desc">Instant transfer to UPI ID</div>
+                                        <div class="upi-option-name">Net Banking</div>
+                                        <div class="upi-option-desc">Transfer to bank account via IMPS/NEFT or UPI</div>
                                     </div>
                                 </div>
                             </div>
@@ -1486,17 +1605,10 @@
                             <label class="form-label">Account Holder Name</label>
                             <input type="text" class="form-input" id="withdrawalAccountName" placeholder="Enter account holder name">
                         </div>
-                    </div>
 
-                    <div id="upiWithdrawalFields" style="display: none;">
                         <div class="form-group">
-                            <label class="form-label">UPI ID</label>
+                            <label class="form-label">UPI ID (Optional - for faster transfers)</label>
                             <input type="text" class="form-input" id="withdrawalUPI" placeholder="yourname@upi (e.g., 9876543210@paytm)">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">UPI Name</label>
-                            <input type="text" class="form-input" id="withdrawalUPIName" placeholder="Name registered with UPI">
                         </div>
                     </div>
 
@@ -1505,7 +1617,7 @@
                     </button>
 
                     <div style="margin-top: 25px; padding: 20px; background: var(--background); border-radius: var(--radius); font-size: 0.95rem; color: var(--text-light);">
-                        <strong>Note:</strong> Withdrawals require admin approval and are processed within 24-48 hours. UPI transfers are faster (2-4 hours). Minimum withdrawal amount is ₹100.
+                        <strong>Note:</strong> Withdrawals require admin approval and are processed within 24-48 hours. Providing UPI ID can enable faster transfers (2-4 hours). Minimum withdrawal amount is ₹100.
                     </div>
 
                     <!-- Withdrawal History -->
@@ -1647,16 +1759,15 @@
 
                 <div class="payment-summary">
                     <div class="summary-row">
-                        <span>Amount:</span>
+                        <span>You Pay:</span>
+                        <span id="totalAmount">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Added to Wallet:</span>
                         <span id="paymentAmount">₹0</span>
                     </div>
-                    <div class="summary-row">
-                        <span>Processing Fee:</span>
-                        <span id="processingFee">₹0</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Total:</span>
-                        <span id="totalAmount">₹0</span>
+                    <div style="font-size: 0.85rem; color: var(--text-light); text-align: center; margin-top: 10px; padding: 10px; background: rgba(0, 82, 204, 0.05); border-radius: var(--radius);">
+                        <i class="fas fa-info-circle"></i> 2% payment gateway fee is deducted from your payment
                     </div>
                 </div>
 
@@ -1745,7 +1856,7 @@
         let withdrawalHistory = [];
         let pendingWithdrawals = [];
         let pendingUserData = null; // Store user data during email verification
-        let currentWithdrawalMethod = 'bank';
+        let currentWithdrawalMethod = 'netbanking';
 
         // Admin emails
         const ADMIN_EMAILS = ['vishuu7306@gmail.com'];
@@ -2454,8 +2565,8 @@
                                 return {
                                     id: doc.id,
                                     type: 'withdrawal',
-                                    amount: data.amount,
-                                    description: data.description,
+                                    amount: -Math.abs(data.amount),
+                                    description: data.description || `Withdrawal request - ${data.method || 'Bank'}`,
                                     status: data.approvalStatus || 'pending_approval',
                                     date: data.date,
                                     time: data.time,
@@ -2463,14 +2574,20 @@
                                     method: data.method,
                                     upiId: data.upiId,
                                     bankAccount: data.bankAccount,
-                                    ifscCode: data.ifscCode
+                                    ifscCode: data.ifscCode,
+                                    accountName: data.accountName
                                 };
                             });
                             
-                            // Add pending withdrawals to withdrawal history if not already in transactions
+                            // Add pending withdrawals to withdrawal history and transactions if not already present
                             pendingWithdrawals.forEach(pw => {
-                                if (!withdrawalHistory.find(w => w.id === pw.id)) {
+                                const existsInTransactions = transactions.find(t => t.id === pw.id);
+                                const existsInWithdrawals = withdrawalHistory.find(w => w.id === pw.id);
+                                
+                                if (!existsInWithdrawals) {
                                     withdrawalHistory.unshift(pw);
+                                }
+                                if (!existsInTransactions) {
                                     transactions.unshift(pw);
                                 }
                             });
@@ -2587,7 +2704,7 @@
             } else if (tabName === 'winners') {
                 renderWinners();
             } else if (tabName === 'withdrawal') {
-                renderWithdrawalHistory();
+                fetchWithdrawalHistory();
             } else if (tabName === 'admin') {
                 console.log('Admin tab clicked, isAdmin:', isAdmin);
                 if (isAdmin) {
@@ -3299,28 +3416,13 @@
         }
 
         function selectWithdrawalMethod(method) {
-            // Remove selected class from all options
-            document.querySelectorAll('#withdrawalTab .upi-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-
-            // Add selected class to clicked option
-            event.currentTarget.classList.add('selected');
-
-            // Check the radio button
-            document.querySelector(`input[name="withdrawalMethod"][value="${method}"]`).checked = true;
-            currentWithdrawalMethod = method;
-
-            // Show/hide relevant fields
+            // Only netbanking method is available now
+            currentWithdrawalMethod = 'netbanking';
+            
+            // Always show bank fields since we only have one method
             const bankFields = document.getElementById('bankWithdrawalFields');
-            const upiFields = document.getElementById('upiWithdrawalFields');
-
-            if (method === 'bank') {
+            if (bankFields) {
                 bankFields.style.display = 'block';
-                upiFields.style.display = 'none';
-            } else {
-                bankFields.style.display = 'none';
-                upiFields.style.display = 'block';
             }
         }
 
@@ -3342,49 +3444,36 @@
                 return;
             }
 
-            let withdrawalDetails = {};
-            let description = '';
+            const account = document.getElementById('withdrawalAccount').value.trim();
+            const ifsc = document.getElementById('withdrawalIFSC').value.trim();
+            const accountName = document.getElementById('withdrawalAccountName').value.trim();
+            const upiId = document.getElementById('withdrawalUPI').value.trim();
 
-            if (currentWithdrawalMethod === 'bank') {
-                const account = document.getElementById('withdrawalAccount').value.trim();
-                const ifsc = document.getElementById('withdrawalIFSC').value.trim();
-                const accountName = document.getElementById('withdrawalAccountName').value.trim();
+            if (!account || !ifsc || !accountName) {
+                showNotification('Please fill in all required bank details', 'error');
+                return;
+            }
 
-                if (!account || !ifsc || !accountName) {
-                    showNotification('Please fill in all bank details', 'error');
-                    return;
-                }
-
-                withdrawalDetails = {
-                    bankAccount: account,
-                    ifscCode: ifsc,
-                    accountName: accountName,
-                    method: 'bank'
-                };
-                description = `Bank withdrawal to ***${account.slice(-4)}`;
-            } else {
-                const upiId = document.getElementById('withdrawalUPI').value.trim();
-                const upiName = document.getElementById('withdrawalUPIName').value.trim();
-
-                if (!upiId || !upiName) {
-                    showNotification('Please fill in all UPI details', 'error');
-                    return;
-                }
-
-                // Validate UPI ID format
+            // Validate UPI ID format if provided
+            if (upiId) {
                 const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z0-9][a-zA-Z0-9.-]{1,64}$/;
                 if (!upiRegex.test(upiId)) {
-                    showNotification('Please enter a valid UPI ID', 'error');
+                    showNotification('Please enter a valid UPI ID format', 'error');
                     return;
                 }
-
-                withdrawalDetails = {
-                    upiId: upiId,
-                    upiName: upiName,
-                    method: 'upi'
-                };
-                description = `UPI withdrawal to ${upiId}`;
             }
+
+            const withdrawalDetails = {
+                bankAccount: account,
+                ifscCode: ifsc,
+                accountName: accountName,
+                upiId: upiId || null,
+                method: 'netbanking'
+            };
+
+            const description = upiId ? 
+                `Net Banking withdrawal to ***${account.slice(-4)} (UPI: ${upiId})` : 
+                `Net Banking withdrawal to ***${account.slice(-4)}`;
 
             try {
                 const userRef = db.collection('users').doc(currentUser.uid);
@@ -3443,14 +3532,10 @@
 
                 // Clear form
                 document.getElementById('withdrawalAmount').value = '';
-                if (currentWithdrawalMethod === 'bank') {
-                    document.getElementById('withdrawalAccount').value = '';
-                    document.getElementById('withdrawalIFSC').value = '';
-                    document.getElementById('withdrawalAccountName').value = '';
-                } else {
-                    document.getElementById('withdrawalUPI').value = '';
-                    document.getElementById('withdrawalUPIName').value = '';
-                }
+                document.getElementById('withdrawalAccount').value = '';
+                document.getElementById('withdrawalIFSC').value = '';
+                document.getElementById('withdrawalAccountName').value = '';
+                document.getElementById('withdrawalUPI').value = '';
 
                 showNotification('Withdrawal request submitted for admin approval!', 'success');
 
@@ -3563,12 +3648,11 @@
 
         function updatePaymentSummary() {
             const amount = parseInt(document.getElementById('amountInput').value) || 0;
-            const processingFee = amount > 0 ? 2 : 0; // Fixed ₹2 processing fee
-            const total = amount + processingFee;
+            const actualDepositAmount = Math.floor(amount * 0.98); // 98% goes to wallet, 2% for gateway fees
 
-            document.getElementById('paymentAmount').textContent = '₹' + amount.toLocaleString();
-            document.getElementById('processingFee').textContent = '₹' + processingFee;
-            document.getElementById('totalAmount').textContent = '₹' + total.toLocaleString();
+            document.getElementById('paymentAmount').textContent = '₹' + actualDepositAmount.toLocaleString();
+            document.getElementById('totalAmount').textContent = '₹' + amount.toLocaleString();
+            currentPaymentAmount = actualDepositAmount;
         }
 
         async function handlePayment() {
@@ -3596,24 +3680,25 @@
             }
 
             const selectedUPIMethod = document.querySelector('input[name="upiMethod"]:checked').value;
-            currentPaymentAmount = amount; // Store the deposit amount (without processing fee)
+            
+            // User pays exact amount they entered
+            // Platform internally calculates actual amount after deducting 2% gateway fee
+            const userPayAmount = amount; // What user pays
+            const actualDepositAmount = Math.floor(amount * 0.98); // What gets added to wallet (98% of payment)
+            
+            currentPaymentAmount = actualDepositAmount; // Store the actual deposit amount
             currentPaymentMethod = selectedUPIMethod;
 
             try {
                 showNotification('Initiating payment verification...', 'success');
 
-                const processingFee = Math.max(Math.round(amount * 0.02), 2);
-                const totalAmount = amount + processingFee;
-
                 if (selectedUPIMethod === 'upi') {
                     // Show UPI QR code modal
                     closeModal('addMoneyModal');
-                    showUPIPayment(totalAmount);
+                    showUPIPayment(userPayAmount);
                 } else {
                     // Try Cashfree integration with payment verification
                     try {
-                        const processingFee = 2; // Fixed ₹2 processing fee
-                const totalAmount = amount + processingFee;
                 
                 const response = await fetch(`${API_BASE_URL}/create-payment-order`, {
                             method: 'POST',
@@ -3621,8 +3706,8 @@
                                 'Content-Type': 'application/json',
                             },
                             body: JSON.stringify({
-                                amount: totalAmount,
-                                depositAmount: amount, // Separate deposit amount
+                                amount: userPayAmount, // User pays this amount
+                                depositAmount: actualDepositAmount, // This gets added to wallet
                                 userId: currentUser.uid,
                                 userEmail: email,
                                 upiMethod: selectedUPIMethod
@@ -3643,7 +3728,7 @@
                                 if (result.error) {
                                     throw new Error(result.error.message || 'Payment failed');
                                 } else if (result.paymentDetails && result.paymentDetails.paymentStatus === 'SUCCESS') {
-                                    await verifyAndProcessPayment(amount, result.paymentDetails.paymentId);
+                                    await verifyAndProcessPayment(actualDepositAmount, result.paymentDetails.paymentId);
                                 }
                             } else {
                                 throw new Error('Cashfree not available');
@@ -3654,7 +3739,7 @@
                     } catch (apiError) {
                         console.log('API/Cashfree not available, using manual verification');
                         closeModal('addMoneyModal');
-                        showUPIPayment(totalAmount);
+                        showUPIPayment(userPayAmount);
                     }
                 }
 
@@ -3675,7 +3760,8 @@
                     body: JSON.stringify({
                         paymentId: paymentId,
                         userId: currentUser.uid,
-                        amount: amount
+                        amount: amount,
+                        totalPaid: amount
                     })
                 });
 
@@ -3736,7 +3822,7 @@
                 // Simulate payment verification delay
                 setTimeout(async () => {
                     // In production, verify payment status with payment gateway
-                    // Pass the deposit amount (currentPaymentAmount) not the total with processing fee
+                    // Pass the actual deposit amount (98% of what user paid)
                     await handlePaymentSuccess(currentPaymentAmount, `upi_${Date.now()}`);
                 }, 2000);
 
@@ -3757,7 +3843,7 @@
                 const paymentTransaction = {
                     id: generateTransactionId(),
                     type: 'money_added',
-                    amount: depositAmount, // Only the deposit amount, not including processing fee
+                    amount: depositAmount,
                     description: `Money added via ${currentPaymentMethod.toUpperCase()}`,
                     timestamp: new Date(),
                     paymentId: paymentId || `manual_${Date.now()}`,
@@ -3769,11 +3855,11 @@
                     email: document.getElementById('paymentEmail')?.value || currentUser.email
                 };
 
-                // Update user balance in Firestore only after payment verification
+                // Update user balance and profile in Firestore
                 const batch = db.batch();
 
                 batch.update(userRef, {
-                    balance: firebase.firestore.FieldValue.increment(depositAmount), // Only add deposit amount
+                    balance: firebase.firestore.FieldValue.increment(depositAmount),
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -3783,70 +3869,49 @@
 
                 await batch.commit();
 
-                // Update local state with deposit amount only
+                // Update local state immediately
                 userBalance += depositAmount;
-
                 transactions.unshift(paymentTransaction);
 
+                // Update all UI elements
                 document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                updateProfileStats();
                 renderTransactions();
 
-                // Refresh user data from Firestore to ensure profile is updated
-                const updatedUserDoc = await db.collection('users').doc(currentUser.uid).get();
-                if (updatedUserDoc.exists) {
-                    const updatedUserData = updatedUserDoc.data();
-                    userBalance = updatedUserData.balance || userBalance;
-                    userProfile = {
-                        contestsJoined: updatedUserData.contestsJoined || 0,
-                        contestsWon: updatedUserData.contestsWon || 0,
-                        totalWinnings: updatedUserData.totalWinnings || 0
-                    };
-                    
-                    // Update all UI elements
-                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
-                    updateProfileStats();
-                    
-                    // Set up live profile updates every 30 seconds
-                    if (!window.profileUpdateInterval) {
-                        window.profileUpdateInterval = setInterval(async () => {
-                            try {
-                                const liveUserDoc = await db.collection('users').doc(currentUser.uid).get();
-                                if (liveUserDoc.exists) {
-                                    const liveUserData = liveUserDoc.data();
-                                    const oldBalance = userBalance;
-                                    
-                                    userBalance = liveUserData.balance || userBalance;
-                                    userProfile = {
-                                        contestsJoined: liveUserData.contestsJoined || 0,
-                                        contestsWon: liveUserData.contestsWon || 0,
-                                        totalWinnings: liveUserData.totalWinnings || 0
-                                    };
-                                    
-                                    // Update UI elements
-                                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
-                                    updateProfileStats();
-                                    
-                                    // Show notification if balance changed
-                                    if (userBalance !== oldBalance) {
-                                        const diff = userBalance - oldBalance;
-                                        if (diff > 0) {
-                                            showNotification(`💰 Balance updated! +₹${diff.toLocaleString()} added to your wallet`, 'success');
-                                        } else {
-                                            showNotification(`Balance updated: ₹${Math.abs(diff).toLocaleString()} deducted`, 'error');
-                                        }
-                                        
-                                        // Refresh transactions if on transactions tab
-                                        const transactionsTab = document.getElementById('transactionsTab');
-                                        if (transactionsTab && transactionsTab.classList.contains('active')) {
-                                            renderTransactions();
-                                        }
-                                    }
-                                }
-                            } catch (error) {
-                                console.log('Profile update failed:', error);
-                            }
-                        }, 30000);
+                // Force refresh user data from Firestore
+                try {
+                    const refreshedUserDoc = await db.collection('users').doc(currentUser.uid).get();
+                    if (refreshedUserDoc.exists) {
+                        const refreshedData = refreshedUserDoc.data();
+                        userBalance = refreshedData.balance || userBalance;
+                        userProfile = {
+                            contestsJoined: refreshedData.contestsJoined || 0,
+                            contestsWon: refreshedData.contestsWon || 0,
+                            totalWinnings: refreshedData.totalWinnings || 0
+                        };
+                        
+                        // Update UI again with fresh data
+                        document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                        updateProfileStats();
+                        
+                        // Reload transactions from Firestore
+                        const transactionsSnapshot = await db.collection('users').doc(currentUser.uid)
+                            .collection('transactions').orderBy('timestamp', 'desc').limit(50).get();
+                        
+                        if (!transactionsSnapshot.empty) {
+                            transactions = transactionsSnapshot.docs.map(doc => {
+                                const data = doc.data();
+                                return {
+                                    id: doc.id,
+                                    ...data,
+                                    timestamp: data.timestamp && data.timestamp.toDate ? data.timestamp.toDate() : data.timestamp
+                                };
+                            });
+                            renderTransactions();
+                        }
                     }
+                } catch (refreshError) {
+                    console.log('Error refreshing user data:', refreshError);
                 }
 
                 // Clear form
@@ -4601,17 +4666,14 @@
 // === Updated Payment & Withdrawal Logic ===
 
 // ✅ Updated sections to apply your requested changes
-// 1. Set processing fee to ₹1 flat instead of 2%
+// 1. Remove processing fee completely
 // 2. Ensure withdrawal requests are sent
-// 3. Add UPI withdrawal method
+// 3. Fix withdrawals showing in transactions
 
 function updatePaymentSummary() {
   const amount = parseFloat(document.getElementById('amountInput').value) || 0;
-  const fee = amount > 0 ? 1 : 0; // Flat ₹1 fee
-  const total = amount + fee;
-  document.getElementById('paymentAmount').textContent = `₹${amount}`;
-  document.getElementById('processingFee').textContent = `₹${fee}`;
-  document.getElementById('totalAmount').textContent = `₹${total}`;
+  document.getElementById('paymentAmount').textContent = `₹${amount.toLocaleString()}`;
+  document.getElementById('totalAmount').textContent = `₹${amount.toLocaleString()}`;
   currentPaymentAmount = amount;
 }
 
