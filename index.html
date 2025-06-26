@@ -1864,18 +1864,33 @@ function renderWithdrawalHistory() {
         // Contest templates inspired by Bhagyalakshmi lotteries
         const CONTEST_TEMPLATES = [
             {
+                id: 'ultimate_crorepati',
+                title: 'Ultimate Crorepati - ₹1 Crore Jackpot',
+                entryFee: 1000,
+                maxParticipants: 10000,
+                prizePool: 10000000,
+                duration: 240 * 60 * 60 * 1000,
+                description: 'The ultimate lottery experience! Win up to ₹1 CRORE - the biggest jackpot in Indian online lottery history!',
+                prizeStructure: [
+                    { position: '1st Prize', amount: 5000000, percentage: '50%' },
+                    { position: '2nd Prize', amount: 2500000, percentage: '25%' },
+                    { position: '3rd Prize', amount: 1000000, percentage: '10%' },
+                    { position: 'Mega Bonus (625 winners)', amount: 2000, percentage: '0.02%' }
+                ]
+            },
+            {
                 id: 'Easy_jackpot',
                 title: 'Mega Jackpot',
                 entryFee: 50,
                 maxParticipants: 2000,
                 prizePool: 100000,
-                duration: 6 * 60 * 60 * 1000,
+                duration: 24 * 60 * 60 * 1000,
                 description: 'Our flagship lottery with life-changing prizes - inspired by traditional Kerala lotteries',
                 prizeStructure: [
                     { position: '1st Prize', amount: 50000, percentage: '50%' },
                     { position: '2nd Prize', amount: 25000, percentage: '25%' },
-                    { position: '3rd Prize', amount: 15000, percentage: '15%' },
-                    { position: 'Consolation (5 winners)', amount: 1000, percentage: '10%' }
+                    { position: '3rd Prize', amount: 10000, percentage: '10%' },
+                    { position: 'Consolation (100 winners)', amount: 100, percentage: '10%' }
                 ]
             },
             {
@@ -1884,13 +1899,13 @@ function renderWithdrawalHistory() {
                 entryFee: 100,
                 maxParticipants: 1500,
                 prizePool: 150000,
-                duration: 12 * 60 * 60 * 1000,
+                duration: 18 * 60 * 60 * 1000,
                 description: 'Premium lottery with multiple prize tiers and guaranteed consolation prizes',
                 prizeStructure: [
                     { position: '1st Prize', amount: 75000, percentage: '50%' },
                     { position: '2nd Prize', amount: 37500, percentage: '25%' },
-                    { position: '3rd Prize', amount: 22500, percentage: '15%' },
-                    { position: 'Lucky 10 (10 winners)', amount: 750, percentage: '10%' }
+                    { position: '3rd Prize', amount: 15000, percentage: '10%' },
+                    { position: 'Lucky 100 (100 winners)', amount: 200, percentage: '0.13%' }
                 ]
             },
             {
@@ -1899,13 +1914,13 @@ function renderWithdrawalHistory() {
                 entryFee: 25,
                 maxParticipants: 800,
                 prizePool: 20000,
-                duration: 30 * 60 * 1000,
+                duration: 12 * 60 * 60 * 1000,
                 description: 'Quick-fire lottery with instant results - perfect for instant gratification',
                 prizeStructure: [
                     { position: '1st Prize', amount: 10000, percentage: '50%' },
                     { position: '2nd Prize', amount: 5000, percentage: '25%' },
-                    { position: '3rd Prize', amount: 3000, percentage: '15%' },
-                    { position: 'Special 3 (3 winners)', amount: 400, percentage: '10%' }
+                    { position: '3rd Prize', amount: 2000, percentage: '10%' },
+                    { position: 'Special 30 (30 winners)', amount: 100, percentage: '10%' }
                 ]
             },
             {
@@ -1914,13 +1929,13 @@ function renderWithdrawalHistory() {
                 entryFee: 200,
                 maxParticipants: 1200,
                 prizePool: 240000,
-                duration: 24 * 60 * 60 * 1000,
+                duration: 36 * 60 * 60 * 1000,
                 description: 'Festival special with bumper prizes and multiple consolation rewards',
                 prizeStructure: [
                     { position: '1st Prize', amount: 120000, percentage: '50%' },
                     { position: '2nd Prize', amount: 60000, percentage: '25%' },
-                    { position: '3rd Prize', amount: 36000, percentage: '15%' },
-                    { position: 'Festival Bonus (10 winners)', amount: 1600, percentage: '10%' }
+                    { position: '3rd Prize', amount: 24000, percentage: '10%' },
+                    { position: 'Festival Bonus (80 winners)', amount: 400, percentage: '0.16%' }
                 ]
             },
             {
@@ -1934,8 +1949,8 @@ function renderWithdrawalHistory() {
                 prizeStructure: [
                     { position: '1st Prize', amount: 250000, percentage: '50%' },
                     { position: '2nd Prize', amount: 125000, percentage: '25%' },
-                    { position: '3rd Prize', amount: 75000, percentage: '15%' },
-                    { position: 'Dream Bonus (15 winners)', amount: 2000, percentage: '10%' }
+                    { position: '3rd Prize', amount: 50000, percentage: '10%' },
+                    { position: 'Dream Bonus (70 winners)', amount: 1000, percentage: '0.2%' }
                 ]
             }
         ];
