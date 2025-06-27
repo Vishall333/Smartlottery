@@ -1526,8 +1526,24 @@ function renderWithdrawalHistory() {
             </div>
 
             <div id="joinedContestsTab" class="tab-content">
-                <div id="joinedContestsList">
-                    <!-- Joined contests will be rendered here -->
+                <!-- Active Contests Section -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-play-circle"></i> Active Contests
+                    </h3>
+                    <div id="activeJoinedContestsList">
+                        <!-- Active joined contests will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Completed Contests Section -->
+                <div>
+                    <h3 style="color: var(--secondary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle"></i> Completed Contests
+                    </h3>
+                    <div id="completedJoinedContestsList">
+                        <!-- Completed joined contests will be rendered here -->
+                    </div>
                 </div>
             </div>
 
@@ -1958,13 +1974,13 @@ function renderWithdrawalHistory() {
             }
         ];
 
-        // Sample data with Indian names
+        // Sample data with realistic Indian winners (these appear as past contest winners)
         const sampleWinners = [
-            { name: 'Rajesh Kumar', contest: 'Mega Jackpot', prize: 50000, date: '2 hours ago', isBot: false },
-            { name: 'Priya Sharma', contest: 'Speed Earning', prize: 10000, date: '3 hours ago', isBot: false },
-            { name: 'Amit Singh', contest: 'Golden Fortune Draw', prize: 75000, date: '5 hours ago', isBot: false },
-            { name: 'Sneha Patel', contest: 'Festival Special Bumper', prize: 120000, date: '1 day ago', isBot: false },
-            { name: 'Vikram Yadav', contest: 'Crorepati Dream Lottery', prize: 250000, date: '2 days ago', isBot: false }
+            { name: 'Arun Krishnamurthy', contest: 'Mega Jackpot', prize: 50000, date: '4 hours ago', isBot: false, position: '1st Prize' },
+            { name: 'Nisha Agarwal', contest: 'Speed Earning', prize: 10000, date: '7 hours ago', isBot: false, position: '1st Prize' },
+            { name: 'Deepak Malhotra', contest: 'Golden Fortune Draw', prize: 75000, date: '1 day ago', isBot: false, position: '1st Prize' },
+            { name: 'Kavitha Reddy', contest: 'Festival Special Bumper', prize: 120000, date: '2 days ago', isBot: false, position: '1st Prize' },
+            { name: 'Sanjay Khanna', contest: 'Crorepati Dream Lottery', prize: 250000, date: '3 days ago', isBot: false, position: '1st Prize' }
         ];
 
         // Terms and Conditions handling
@@ -2440,13 +2456,16 @@ function renderWithdrawalHistory() {
         }
 
         function renderJoinedContests() {
-            const joinedContestsList = document.getElementById('joinedContestsList');
-            if (!joinedContestsList) return;
+            const activeJoinedContestsList = document.getElementById('activeJoinedContestsList');
+            const completedJoinedContestsList = document.getElementById('completedJoinedContestsList');
+            
+            if (!activeJoinedContestsList || !completedJoinedContestsList) return;
 
-            joinedContestsList.innerHTML = '';
+            activeJoinedContestsList.innerHTML = '';
+            completedJoinedContestsList.innerHTML = '';
 
             if (joinedContests.length === 0) {
-                joinedContestsList.innerHTML = `
+                activeJoinedContestsList.innerHTML = `
                     <div class="joined-contest-card">
                         <div class="joined-contest-header">
                             <div class="joined-contest-title">No contests joined yet</div>
@@ -2457,71 +2476,141 @@ function renderWithdrawalHistory() {
                 return;
             }
 
+            // Separate contests into active and completed
+            const activeContests = [];
+            const completedContests = [];
+
             joinedContests.forEach(joinedContest => {
                 const contest = CONTEST_TEMPLATES.find(c => c.id === joinedContest.contestId);
                 if (!contest) return;
 
-                const joinedContestCard = document.createElement('div');
-                joinedContestCard.className = 'joined-contest-card';
-
-                let statusClass = 'status-joined';
-                let statusText = 'Active';
-
-                if (joinedContest.status === 'completed') {
-                    statusClass = 'status-completed';
-                    statusText = 'Completed';
-                } else if (joinedContest.status === 'won') {
-                    statusClass = 'status-won';
-                    statusText = `Won ${joinedContest.position || ''}`;
-                } else if (joinedContest.status === 'joined') {
-                    // Check if contest is actually still active
-                    const contestState = getContestState(contest);
-                    if (contestState === 'Draw Completed') {
-                        statusClass = 'status-completed';
-                        statusText = 'Draw Completed';
-                    } else {
-                        statusClass = 'status-joined';
-                        statusText = 'Active';
-                    }
-                }
-
                 const contestState = getContestState(contest);
-                const timeRemaining = getTimeRemaining(contest.endTime);
-                
-                joinedContestCard.innerHTML = `
-                    <div class="joined-contest-header">
-                        <div class="joined-contest-title">${contest.title}</div>
-                        <div class="joined-contest-status ${statusClass}">${statusText}</div>
-                    </div>
-                    <div class="joined-contest-details">
-                        <div class="joined-detail">
-                            <div class="joined-detail-label">Entry Fee</div>
-                            <div class="joined-detail-value">₹${contest.entryFee}</div>
+                const isCompleted = joinedContest.status === 'completed' || 
+                                  joinedContest.status === 'won' || 
+                                  contestState === 'Draw Completed' ||
+                                  contest.status === 'completed';
+
+                if (isCompleted) {
+                    completedContests.push(joinedContest);
+                } else {
+                    activeContests.push(joinedContest);
+                }
+            });
+
+            // Render active contests
+            if (activeContests.length === 0) {
+                activeJoinedContestsList.innerHTML = `
+                    <div class="joined-contest-card" style="border-left: 5px solid var(--text-light); opacity: 0.7;">
+                        <div class="joined-contest-header">
+                            <div class="joined-contest-title" style="color: var(--text-light);">No active contests</div>
                         </div>
-                        <div class="joined-detail">
-                            <div class="joined-detail-label">Prize Pool</div>
-                            <div class="joined-detail-value">₹${contest.prizePool.toLocaleString()}</div>
-                        </div>
-                        <div class="joined-detail">
-                            <div class="joined-detail-label">Joined Date</div>
-                            <div class="joined-detail-value">${joinedContest.joinedDate}</div>
-                        </div>
-                        <div class="joined-detail">
-                            <div class="joined-detail-label">Joined Time</div>
-                            <div class="joined-detail-value">${joinedContest.joinedTime}</div>
-                        </div>
-                        <div class="joined-detail">
-                            <div class="joined-detail-label">Prize Won</div>
-                            <div class="joined-detail-value">${joinedContest.prizeWon ? '₹' + joinedContest.prizeWon.toLocaleString() : 'Pending'}</div>
-                        </div>
-                        <div class="joined-detail">
-                            <div class="joined-detail-label">Contest State</div>
-                            <div class="joined-detail-value">${contestState === 'Draw Active' && timeRemaining !== 'Ended' ? `Active - ${timeRemaining} left` : contestState}</div>
-                        </div>
+                        <p style="color: var(--text-light); margin: 10px 0; font-size: 0.9rem;">All your contests have been completed or are waiting for results.</p>
                     </div>
                 `;
-                joinedContestsList.appendChild(joinedContestCard);
-            });
+            } else {
+                activeContests.forEach(joinedContest => {
+                    renderJoinedContestCard(joinedContest, activeJoinedContestsList, 'active');
+                });
+            }
+
+            // Render completed contests
+            if (completedContests.length === 0) {
+                completedJoinedContestsList.innerHTML = `
+                    <div class="joined-contest-card" style="border-left: 5px solid var(--text-light); opacity: 0.7;">
+                        <div class="joined-contest-header">
+                            <div class="joined-contest-title" style="color: var(--text-light);">No completed contests</div>
+                        </div>
+                        <p style="color: var(--text-light); margin: 10px 0; font-size: 0.9rem;">Your completed contests will appear here.</p>
+                    </div>
+                `;
+            } else {
+                completedContests.forEach(joinedContest => {
+                    renderJoinedContestCard(joinedContest, completedJoinedContestsList, 'completed');
+                });
+            }
+        }
+
+        function renderJoinedContestCard(joinedContest, container, type) {
+            const contest = CONTEST_TEMPLATES.find(c => c.id === joinedContest.contestId);
+            if (!contest) return;
+
+            const joinedContestCard = document.createElement('div');
+            joinedContestCard.className = 'joined-contest-card';
+
+            let statusClass = 'status-joined';
+            let statusText = 'Active';
+            let borderColor = 'var(--primary)';
+
+            if (type === 'completed') {
+                borderColor = 'var(--secondary)';
+                if (joinedContest.status === 'won') {
+                    statusClass = 'status-won';
+                    statusText = `Won ${joinedContest.position || ''}`;
+                    borderColor = 'var(--warning)';
+                } else {
+                    statusClass = 'status-completed';
+                    statusText = 'No Prize';
+                }
+            } else {
+                // Active contest
+                const contestState = getContestState(contest);
+                if (contestState === 'Draw Completed') {
+                    statusClass = 'status-completed';
+                    statusText = 'Awaiting Results';
+                    borderColor = 'var(--warning)';
+                } else {
+                    statusClass = 'status-joined';
+                    statusText = 'Active';
+                    borderColor = 'var(--success)';
+                }
+            }
+
+            // Apply border color
+            joinedContestCard.style.borderLeft = `5px solid ${borderColor}`;
+
+            const contestState = getContestState(contest);
+            const timeRemaining = getTimeRemaining(contest.endTime);
+            
+            joinedContestCard.innerHTML = `
+                <div class="joined-contest-header">
+                    <div class="joined-contest-title">${contest.title}</div>
+                    <div class="joined-contest-status ${statusClass}">${statusText}</div>
+                </div>
+                <div class="joined-contest-details">
+                    <div class="joined-detail">
+                        <div class="joined-detail-label">Entry Fee</div>
+                        <div class="joined-detail-value">₹${contest.entryFee}</div>
+                    </div>
+                    <div class="joined-detail">
+                        <div class="joined-detail-label">Prize Pool</div>
+                        <div class="joined-detail-value">₹${contest.prizePool.toLocaleString()}</div>
+                    </div>
+                    <div class="joined-detail">
+                        <div class="joined-detail-label">Joined Date</div>
+                        <div class="joined-detail-value">${joinedContest.joinedDate}</div>
+                    </div>
+                    <div class="joined-detail">
+                        <div class="joined-detail-label">Joined Time</div>
+                        <div class="joined-detail-value">${joinedContest.joinedTime}</div>
+                    </div>
+                    <div class="joined-detail">
+                        <div class="joined-detail-label">Prize Won</div>
+                        <div class="joined-detail-value" style="color: ${joinedContest.prizeWon > 0 ? 'var(--success)' : 'var(--text-light)'}; font-weight: ${joinedContest.prizeWon > 0 ? '700' : '400'};">
+                            ${joinedContest.prizeWon ? '₹' + joinedContest.prizeWon.toLocaleString() : (type === 'active' ? 'Pending' : 'No Prize')}
+                        </div>
+                    </div>
+                    <div class="joined-detail">
+                        <div class="joined-detail-label">Status</div>
+                        <div class="joined-detail-value">
+                            ${type === 'active' ? 
+                                (contestState === 'Draw Active' && timeRemaining !== 'Ended' ? `${timeRemaining} left` : 'Awaiting Results') : 
+                                'Completed'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(joinedContestCard);
         }
 
         function getContestState(contest) {
@@ -2761,25 +2850,27 @@ function renderWithdrawalHistory() {
             const contest = activeContests.find(c => c.id === contestId);
             if (!contest) return;
 
-            console.log(`Auto-declaring 1st prize winner for contest: ${contestId}`);
+            console.log(`Auto-declaring 1st prize winner for contest: ${contestId} after timeout`);
 
-            // Create winner entry with Indian name
+            // Create winner entry with Indian name - only 1st prize
             const autoWinner = {
                 name: generateIndianName(),
                 contest: contest.title,
                 prize: contest.prizeStructure[0].amount, // 1st prize only
-                date: 'Just now',
+                date: getTimeAgo(new Date(contest.endTime)), // Show relative to contest end time
                 position: '1st Prize',
-                isBot: false // Don't mark as bot to make it look natural
+                isBot: false, // Never indicate as bot
+                isAutoGenerated: true // Internal flag for tracking
             };
 
-            // Add to winners list
+            // Add to winners list only when contest actually ends
             winners.unshift(autoWinner);
             if (winners.length > 20) winners.pop(); // Keep only recent 20 winners
 
             // Update contest status
             contest.status = 'completed';
             contest.autoWinner = autoWinner;
+            contest.completedAt = new Date();
 
             // Re-render winners if winners tab is active
             const winnersTab = document.getElementById('winnersTab');
@@ -2787,33 +2878,47 @@ function renderWithdrawalHistory() {
                 renderWinners();
             }
 
-            showNotification(`🎉 1st Prize winner declared for "${contest.title}"!`, 'success');
+            showNotification(`🎉 Contest "${contest.title}" completed! Winner declared.`, 'success');
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMins < 5) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minutes ago`;
+            if (diffHours < 24) return `${diffHours} hours ago`;
+            if (diffDays < 7) return `${diffDays} days ago`;
+            return date.toLocaleDateString('en-IN');
         }
 
         function generateIndianName() {
+            // Larger pool of diverse Indian names to avoid repetition
             const indianNames = [
-                'Rajesh Kumar',
-                'Priya Sharma',
-                'Amit Singh',
-                'Sneha Patel',
-                'Vikram Yadav',
-                'Anita Gupta',
-                'Ravi Agarwal',
-                'Kavya Reddy',
-                'Suresh Jain',
-                'Deepika Verma',
-                'Arjun Mehta',
-                'Pooja Shah',
-                'Manish Tiwari',
-                'Swati Mishra',
-                'Karthik Nair',
-                'Ritika Joshi',
-                'Nikhil Bansal',
-                'Shreya Kapoor',
-                'Rohit Saxena',
-                'Meera Sinha'
+                'Rajesh Kumar', 'Priya Sharma', 'Amit Singh', 'Sneha Patel', 'Vikram Yadav',
+                'Anita Gupta', 'Ravi Agarwal', 'Kavya Reddy', 'Suresh Jain', 'Deepika Verma',
+                'Arjun Mehta', 'Pooja Shah', 'Manish Tiwari', 'Swati Mishra', 'Karthik Nair',
+                'Ritika Joshi', 'Nikhil Bansal', 'Shreya Kapoor', 'Rohit Saxena', 'Meera Sinha',
+                'Aditya Krishnan', 'Riya Malhotra', 'Sanjay Pandey', 'Neha Agarwal', 'Varun Chopra',
+                'Isha Desai', 'Harish Rao', 'Simran Kaur', 'Akash Thakur', 'Divya Iyer',
+                'Mohit Ahluwalia', 'Anjali Bhatt', 'Sachin Goyal', 'Priyanka Sood', 'Rahul Khanna',
+                'Tanvi Goel', 'Vishal Anand', 'Kritika Bajaj', 'Kunal Sethi', 'Nandini Chawla',
+                'Abhishek Jha', 'Sakshi Mittal', 'Gaurav Bhatia', 'Preeti Agarwal', 'Siddharth Rana',
+                'Shweta Dalal', 'Yash Malhotra', 'Richa Sehgal', 'Pankaj Sahni', 'Megha Rastogi'
             ];
-            return indianNames[Math.floor(Math.random() * indianNames.length)];
+            
+            // Ensure we don't repeat recent winners
+            let attempts = 0;
+            let selectedName;
+            do {
+                selectedName = indianNames[Math.floor(Math.random() * indianNames.length)];
+                attempts++;
+            } while (attempts < 10 && winners.some(w => w.name === selectedName && w.isAutoGenerated));
+            
+            return selectedName;
         }
 
         function adminDeclareContestResults(contestId, modalElement = null) {
@@ -3533,7 +3638,7 @@ function renderWithdrawalHistory() {
                     activeContests[contestIndex].status = 'completed';
                 }
 
-                // Add winners to recent winners list
+                // Add winners to recent winners list with realistic timing
                 const contestWinners = [];
                 for (let i = 0; i < Math.min(winners.length, 3); i++) {
                     const winner = winners[i];
@@ -3543,9 +3648,10 @@ function renderWithdrawalHistory() {
                             name: winnerData.userData.displayName || 'Winner',
                             contest: contest.title,
                             prize: winner.prize,
-                            date: 'Just now',
+                            date: getTimeAgo(new Date(contest.endTime || Date.now())),
                             position: winner.position,
-                            isBot: false
+                            isBot: false,
+                            contestEndTime: contest.endTime
                         });
                     }
                 }
@@ -3657,36 +3763,7 @@ function renderWithdrawalHistory() {
                 winnersList.appendChild(winnerItem);
             });
 
-            // Show auto-refresh for demo purposes
-            startWinnersAutoRefresh();
-        }
-
-        function startWinnersAutoRefresh() {
-            // Auto-refresh winners every 30 seconds (only for demo purposes)
-            if (!window.winnersRefreshInterval) {
-                window.winnersRefreshInterval = setInterval(() => {
-                    // Add simulated winners occasionally for demo effect
-                    if (winners.length < 3 && Math.random() > 0.7) {
-                        const newWinner = {
-                            name: generateIndianName(),
-                            contest: ['Mega Jackpot', 'Speed Earning', 'Golden Fortune', 'Festival Special'][Math.floor(Math.random() * 4)],
-                            prize: [5000, 10000, 15000, 25000, 50000][Math.floor(Math.random() * 5)],
-                            date: 'Just now',
-                            isBot: false // All winners appear as real users
-                        };
-                        
-                        winners.unshift(newWinner);
-                        if (winners.length > 20) winners.pop(); // Keep only recent 20 winners
-                        
-                        // Only re-render if winners tab is active
-                        const winnersTab = document.getElementById('winnersTab');
-                        if (winnersTab && winnersTab.classList.contains('active')) {
-                            renderWinners();
-                        }
-                    }
-                }, 30000);
             }
-        }
 
         function renderAdminContests() {
             if (!isAdmin) {
