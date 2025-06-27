@@ -1349,7 +1349,7 @@ function renderWithdrawalHistory() {
                         <p>You must provide accurate, complete information during registration. You are responsible for maintaining account confidentiality and all activities under your account. Email verification is mandatory for account activation.</p>
 
                         <h3>4. Payment & Transactions</h3>
-                        <p>All payments are processed through secure, licensed payment gateways (Cashfree). Deposits are non-refundable once lottery tickets are purchased. Winnings are credited automatically upon result declaration. Minimum withdrawal is ₹100.</p>
+                        <p>All payments are processed through secure, licensed payment gateways (Cashfree). Deposits are non-refundable once lottery tickets are purchased. Winnings are credited automatically upon result declaration. Minimum withdrawal is ₹500.</p>
 
                         <h3>5. Fair Play & Transparency</h3>
                         <p>All lottery draws use certified random number generation systems. Results are transparent and verifiable. No manipulation or fraud is tolerated. Winners are selected based purely on chance and luck.</p>
@@ -1574,7 +1574,7 @@ function renderWithdrawalHistory() {
 
                     <div class="form-group">
                         <label class="form-label">Withdrawal Amount</label>
-                        <input type="number" class="form-input" id="withdrawalAmount" min="100" placeholder="Minimum ₹100">
+                        <input type="number" class="form-input" id="withdrawalAmount" min="500" placeholder="Minimum ₹500">
                     </div>
 
                     <div class="form-group">
@@ -1620,7 +1620,7 @@ function renderWithdrawalHistory() {
                     </button>
 
                     <div style="margin-top: 25px; padding: 20px; background: var(--background); border-radius: var(--radius); font-size: 0.95rem; color: var(--text-light);">
-                        <strong>Note:</strong> Withdrawals require admin approval and are processed within 24-48 hours. Providing UPI ID can enable faster transfers (2-4 hours). Minimum withdrawal amount is ₹100.
+                        <strong>Note:</strong> Withdrawals require admin approval and are processed within 24-48 hours. Providing UPI ID can enable faster transfers (2-4 hours). Minimum withdrawal amount is ₹500.
                     </div>
 
                     <!-- Withdrawal History -->
@@ -3643,8 +3643,8 @@ function renderWithdrawalHistory() {
 
             const amount = parseInt(document.getElementById('withdrawalAmount').value);
 
-            if (!amount || amount < 100) {
-                showNotification('Minimum withdrawal amount is ₹100', 'error');
+            if (!amount || amount < 500) {
+                showNotification('Minimum withdrawal amount is ₹500', 'error');
                 return;
             }
 
@@ -4891,8 +4891,8 @@ async function handleWithdrawal() {
   const account = document.getElementById('withdrawalAccount').value.trim();
   const ifsc = document.getElementById('withdrawalIFSC').value.trim();
 
-  if (!amount || amount < 100) {
-    showNotification('Minimum withdrawal amount is ₹100', 'error');
+  if (!amount || amount < 500) {
+    showNotification('Minimum withdrawal amount is ₹500', 'error');
     return;
   }
 
