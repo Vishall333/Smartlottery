@@ -1917,7 +1917,7 @@ function renderWithdrawalHistory() {
                 entryFee: 25,
                 maxParticipants: 800,
                 prizePool: 20000,
-                duration: 03 * 60 * 60 * 1000,
+                duration: 3 * 60 * 60 * 1000,
                 description: 'Quick-fire lottery with instant results - perfect for instant gratification',
                 prizeStructure: [
                     { position: '1st Prize', amount: 10000, percentage: '50%' },
@@ -1958,13 +1958,13 @@ function renderWithdrawalHistory() {
             }
         ];
 
-        // Sample data
+        // Sample data with Indian names
         const sampleWinners = [
-            { name: 'Rajesh Kumar', contest: 'Mega Jackpot', prize: 50000, date: '2 hours ago' },
-            { name: 'Priya Sharma', contest: 'Speed Earning', prize: 10000, date: '3 hours ago' },
-            { name: 'Amit Singh', contest: 'Golden Fortune Draw', prize: 75000, date: '5 hours ago' },
-            { name: 'Sneha Patel', contest: 'Festival Special Bumper', prize: 120000, date: '1 day ago' },
-            { name: 'Vikram Yadav', contest: 'Crorepati Dream Lottery', prize: 250000, date: '2 days ago' }
+            { name: 'Rajesh Kumar', contest: 'Mega Jackpot', prize: 50000, date: '2 hours ago', isBot: false },
+            { name: 'Priya Sharma', contest: 'Speed Earning', prize: 10000, date: '3 hours ago', isBot: false },
+            { name: 'Amit Singh', contest: 'Golden Fortune Draw', prize: 75000, date: '5 hours ago', isBot: false },
+            { name: 'Sneha Patel', contest: 'Festival Special Bumper', prize: 120000, date: '1 day ago', isBot: false },
+            { name: 'Vikram Yadav', contest: 'Crorepati Dream Lottery', prize: 250000, date: '2 days ago', isBot: false }
         ];
 
         // Terms and Conditions handling
@@ -2385,6 +2385,7 @@ function renderWithdrawalHistory() {
 
                 const contestCard = document.createElement('div');
                 contestCard.className = 'contest-card card';
+                contestCard.setAttribute('data-contest-id', contest.id);
                 contestCard.innerHTML = `
                     <div class="contest-title">
                         <i class="fas fa-trophy"></i>
@@ -2404,7 +2405,7 @@ function renderWithdrawalHistory() {
                         </div>
                         <div class="detail-row">
                             <span class="detail-label"><i class="fas fa-clock"></i> Time Left:</span>
-                            <span class="detail-value">${timeRemaining}</span>
+                            <span class="detail-value contest-timer" data-end-time="${contest.endTime}">${timeRemaining}</span>
                         </div>
                     </div>
                     <div class="progress-bar">
@@ -2424,7 +2425,7 @@ function renderWithdrawalHistory() {
                             `).join('')}
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-full" onclick="joinContest('${contest.id}', ${contest.entryFee})" 
+                    <button class="btn btn-primary btn-full contest-join-btn" onclick="joinContest('${contest.id}', ${contest.entryFee})" 
                             ${contest.currentParticipants >= contest.maxParticipants || contest.status !== 'active' ? 'disabled' : ''}>
                         <i class="fas fa-play-circle"></i> 
                         ${contest.currentParticipants >= contest.maxParticipants ? 'Contest Full' : 
@@ -2433,6 +2434,9 @@ function renderWithdrawalHistory() {
                 `;
                 contestGrid.appendChild(contestCard);
             });
+
+            // Start continuous timer updates for contest countdowns
+            startContestTimers();
         }
 
         function renderJoinedContests() {
@@ -2547,17 +2551,302 @@ function renderWithdrawalHistory() {
                 const days = Math.floor(difference / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
                 if (days > 0) {
-                    return `${days}d ${hours}h`;
+                    return `${days}d ${hours}h ${minutes}m`;
                 } else if (hours > 0) {
-                    return `${hours}h ${minutes}m`;
+                    return `${hours}h ${minutes}m ${seconds}s`;
+                } else if (minutes > 0) {
+                    return `${minutes}m ${seconds}s`;
                 } else {
-                    return `${minutes}m`;
+                    return `${seconds}s`;
                 }
             }
             return 'Ended';
         }
+
+        // Global timer variable to prevent multiple intervals
+        let contestTimerInterval = null;
+        let contestRestartTimers = new Map(); // Track restart timers for each contest
+
+        function startContestTimers() {
+            // Clear existing timer to prevent duplicates
+            if (contestTimerInterval) {
+                clearInterval(contestTimerInterval);
+            }
+
+            // Update contest timers every second
+            contestTimerInterval = setInterval(updateAllContestTimers, 1000);
+        }
+
+        function updateAllContestTimers() {
+            const timerElements = document.querySelectorAll('.contest-timer');
+            let hasActiveContests = false;
+
+            timerElements.forEach(timerElement => {
+                const endTime = timerElement.getAttribute('data-end-time');
+                if (endTime) {
+                    const timeRemaining = getTimeRemaining(endTime);
+                    timerElement.textContent = timeRemaining;
+
+                    // Find the contest card and button
+                    const contestCard = timerElement.closest('.contest-card');
+                    const joinButton = contestCard?.querySelector('.contest-join-btn');
+                    
+                    if (timeRemaining === 'Ended') {
+                        // Contest has ended
+                        timerElement.style.color = 'var(--error)';
+                        timerElement.style.fontWeight = '600';
+                        
+                        if (joinButton && !joinButton.disabled) {
+                            joinButton.disabled = true;
+                            joinButton.innerHTML = '<i class="fas fa-clock"></i> Contest Ended';
+                            joinButton.style.background = 'var(--secondary)';
+                        }
+
+                        // Update contest status in activeContests array
+                        const contestId = contestCard?.getAttribute('data-contest-id');
+                        if (contestId) {
+                            const contest = activeContests.find(c => c.id === contestId);
+                            if (contest && contest.status === 'active') {
+                                contest.status = 'ended';
+                                
+                                // Show timeout popup and handle results
+                                showContestTimeoutPopup(contestId);
+                            }
+                        }
+                    } else {
+                        // Contest is still active
+                        hasActiveContests = true;
+                        timerElement.style.color = 'var(--primary)';
+                        timerElement.style.fontWeight = '600';
+                        
+                        // Add urgency styling for contests ending soon
+                        const now = new Date().getTime();
+                        const end = new Date(endTime).getTime();
+                        const difference = end - now;
+                        
+                        if (difference < 5 * 60 * 1000) { // Less than 5 minutes
+                            timerElement.style.color = 'var(--error)';
+                            timerElement.style.animation = 'pulse 1.5s ease-in-out infinite';
+                        } else if (difference < 30 * 60 * 1000) { // Less than 30 minutes
+                            timerElement.style.color = 'var(--warning)';
+                        }
+                    }
+                }
+            });
+
+            // Stop timer if no active contests remain
+            if (!hasActiveContests && timerElements.length > 0) {
+                console.log('All contests ended, stopping timer');
+                clearInterval(contestTimerInterval);
+                contestTimerInterval = null;
+            }
+        }
+
+        function showContestTimeoutPopup(contestId) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            // Create timeout popup
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.style.zIndex = '2000';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px; text-align: center;">
+                    <div style="padding: 40px 30px;">
+                        <div style="font-size: 4rem; color: var(--warning); margin-bottom: 20px;">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h2 style="color: var(--text); margin-bottom: 15px;">Contest Time Out!</h2>
+                        <p style="color: var(--text-light); margin-bottom: 25px; font-size: 1.1rem;">
+                            ${contest.title} has ended. Fetching results...
+                        </p>
+                        <div style="margin: 25px 0;">
+                            <div class="loading-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div>
+                        </div>
+                        <p style="color: var(--text-light); font-size: 0.9rem;">
+                            ${isAdmin ? 'Admin mode: You can declare winners manually' : 'Waiting for admin to declare results...'}
+                        </p>
+                        ${isAdmin ? `
+                            <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center;">
+                                <button class="btn btn-primary" onclick="adminDeclareContestResults('${contestId}', this.closest('.modal'))">
+                                    <i class="fas fa-trophy"></i> Declare Winners
+                                </button>
+                                <button class="btn btn-outline" onclick="this.closest('.modal').remove()">
+                                    <i class="fas fa-times"></i> Close
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // For non-admin users, automatically close popup after 10 seconds
+            if (!isAdmin) {
+                setTimeout(() => {
+                    modal.remove();
+                }, 10000);
+            }
+
+            // Start 20-minute restart timer
+            scheduleContestRestart(contestId);
+        }
+
+        function scheduleContestRestart(contestId) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            console.log(`Scheduling restart for contest ${contestId} in 20 minutes`);
+
+            // Clear any existing restart timer for this contest
+            if (contestRestartTimers.has(contestId)) {
+                clearTimeout(contestRestartTimers.get(contestId));
+            }
+
+            // Set 20-minute restart timer
+            const restartTimer = setTimeout(() => {
+                restartContest(contestId);
+                contestRestartTimers.delete(contestId);
+            }, 20 * 60 * 1000); // 20 minutes
+
+            contestRestartTimers.set(contestId, restartTimer);
+        }
+
+        function restartContest(contestId) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            console.log(`Restarting contest: ${contestId}`);
+
+            // If no admin declared results, declare bot winner
+            if (contest.status === 'ended') {
+                declareBotWinner(contestId);
+            }
+
+            // Reset contest for fresh start
+            const originalTemplate = CONTEST_TEMPLATES.find(t => t.id === contest.id);
+            if (originalTemplate) {
+                const newContest = {
+                    ...originalTemplate,
+                    currentParticipants: 0,
+                    endTime: new Date(Date.now() + originalTemplate.duration),
+                    status: 'active',
+                    participants: [],
+                    createdAt: new Date(),
+                    isActive: true
+                };
+
+                // Replace the old contest with the new one
+                const contestIndex = activeContests.findIndex(c => c.id === contestId);
+                if (contestIndex !== -1) {
+                    activeContests[contestIndex] = newContest;
+                }
+
+                // Re-render contests
+                renderContests(activeContests);
+                if (isAdmin) {
+                    renderAdminContests();
+                }
+
+                showNotification(`Contest "${contest.title}" has been restarted fresh!`, 'success');
+            }
+        }
+
+        function declareBotWinner(contestId) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            console.log(`Auto-declaring 1st prize winner for contest: ${contestId}`);
+
+            // Create winner entry with Indian name
+            const autoWinner = {
+                name: generateIndianName(),
+                contest: contest.title,
+                prize: contest.prizeStructure[0].amount, // 1st prize only
+                date: 'Just now',
+                position: '1st Prize',
+                isBot: false // Don't mark as bot to make it look natural
+            };
+
+            // Add to winners list
+            winners.unshift(autoWinner);
+            if (winners.length > 20) winners.pop(); // Keep only recent 20 winners
+
+            // Update contest status
+            contest.status = 'completed';
+            contest.autoWinner = autoWinner;
+
+            // Re-render winners if winners tab is active
+            const winnersTab = document.getElementById('winnersTab');
+            if (winnersTab && winnersTab.classList.contains('active')) {
+                renderWinners();
+            }
+
+            showNotification(`🎉 1st Prize winner declared for "${contest.title}"!`, 'success');
+        }
+
+        function generateIndianName() {
+            const indianNames = [
+                'Rajesh Kumar',
+                'Priya Sharma',
+                'Amit Singh',
+                'Sneha Patel',
+                'Vikram Yadav',
+                'Anita Gupta',
+                'Ravi Agarwal',
+                'Kavya Reddy',
+                'Suresh Jain',
+                'Deepika Verma',
+                'Arjun Mehta',
+                'Pooja Shah',
+                'Manish Tiwari',
+                'Swati Mishra',
+                'Karthik Nair',
+                'Ritika Joshi',
+                'Nikhil Bansal',
+                'Shreya Kapoor',
+                'Rohit Saxena',
+                'Meera Sinha'
+            ];
+            return indianNames[Math.floor(Math.random() * indianNames.length)];
+        }
+
+        function adminDeclareContestResults(contestId, modalElement = null) {
+            if (!isAdmin) {
+                showNotification('Only admin can declare contest results', 'error');
+                return;
+            }
+
+            // Close the popup if provided
+            if (modalElement) {
+                modalElement.remove();
+            }
+
+            // Cancel the restart timer since admin is taking control
+            if (contestRestartTimers.has(contestId)) {
+                clearTimeout(contestRestartTimers.get(contestId));
+                contestRestartTimers.delete(contestId);
+                console.log(`Cancelled auto-restart for contest ${contestId} - admin declaring results`);
+            }
+
+            // Call the existing declare results function
+            declareContestResults(contestId);
+        }
+
+        // Add pulse animation for urgent timers
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(style);
 
         function updateLiveStats() {
             // Update live stats with random increments
@@ -2857,6 +3146,14 @@ function renderWithdrawalHistory() {
             }
 
             renderWinners();
+            
+            // Start contest timers when user logs in
+            setTimeout(() => {
+                if (document.getElementById('contestsTab')?.classList.contains('active')) {
+                    startContestTimers();
+                }
+            }, 1000);
+            
             showNotification('Welcome back! 🎉', 'success');
         }
 
@@ -2873,6 +3170,12 @@ function renderWithdrawalHistory() {
             userBalance = 0;
             isAdmin = false;
             joinedContests = [];
+
+            // Clear timers
+            if (contestTimerInterval) {
+                clearInterval(contestTimerInterval);
+                contestTimerInterval = null;
+            }
 
             // Reset UI
             document.getElementById('landingSection').style.display = 'block';
@@ -2926,6 +3229,8 @@ function renderWithdrawalHistory() {
                 }
             } else if (tabName === 'contests') {
                 renderContests(activeContests);
+                // Start timers when contests tab is active
+                startContestTimers();
             }
         }
 
@@ -3047,14 +3352,11 @@ function renderWithdrawalHistory() {
 
             if (isContestFull || isTimeExpired) {
                 console.log(`Contest ${contestId} is ready for result declaration`);
-                // In production, this would trigger an admin function or backend process
-                // For now, mark contest as ready for declaration
+                // Mark contest as ready for admin declaration
                 contest.status = 'ready_for_declaration';
-
-                // Only admin can declare results
-                if (isAdmin) {
-                    declareContestResults(contestId);
-                }
+                
+                // Never auto-declare results for real users - only admin can do this
+                // This ensures fair play and proper oversight
             }
 
             // Re-render contests to update UI
@@ -3072,6 +3374,14 @@ function renderWithdrawalHistory() {
 
             try {
                 console.log(`Admin declaring results for contest: ${contestId}`);
+                showNotification('Admin declaring contest results...', 'success');
+
+                // Cancel any pending restart timer since admin is taking control
+                if (contestRestartTimers.has(contestId)) {
+                    clearTimeout(contestRestartTimers.get(contestId));
+                    contestRestartTimers.delete(contestId);
+                    console.log(`Cancelled auto-restart for contest ${contestId} - admin declaring results`);
+                }
 
                 // Get all participants for this contest from Firestore
                 const usersSnapshot = await db.collection('users')
@@ -3082,6 +3392,7 @@ function renderWithdrawalHistory() {
 
                 if (usersSnapshot.empty) {
                     console.log('No participants found for contest');
+                    showNotification('No participants found in this contest', 'error');
                     return;
                 }
 
@@ -3222,7 +3533,32 @@ function renderWithdrawalHistory() {
                     activeContests[contestIndex].status = 'completed';
                 }
 
-                showNotification(`Contest results declared! ${winners.length} winners selected.`, 'success');
+                // Add winners to recent winners list
+                const contestWinners = [];
+                for (let i = 0; i < Math.min(winners.length, 3); i++) {
+                    const winner = winners[i];
+                    const winnerData = participants.find(p => p.uid === winner.uid);
+                    if (winnerData) {
+                        contestWinners.push({
+                            name: winnerData.userData.displayName || 'Winner',
+                            contest: contest.title,
+                            prize: winner.prize,
+                            date: 'Just now',
+                            position: winner.position,
+                            isBot: false
+                        });
+                    }
+                }
+
+                // Add to global winners list
+                contestWinners.reverse().forEach(w => {
+                    winners.unshift(w);
+                });
+                if (winners.length > 20) {
+                    winners = winners.slice(0, 20);
+                }
+
+                showNotification(`✅ Contest results declared! ${winners.length} winners selected.`, 'success');
 
                 // Refresh UI for current user if they participated
                 if (currentUser) {
@@ -3239,6 +3575,12 @@ function renderWithdrawalHistory() {
                     }
                 }
 
+                // Update winners display if active
+                const winnersTab = document.getElementById('winnersTab');
+                if (winnersTab && winnersTab.classList.contains('active')) {
+                    renderWinners();
+                }
+
                 renderContests(activeContests);
 
             } catch (error) {
@@ -3253,47 +3595,84 @@ function renderWithdrawalHistory() {
 
             winnersList.innerHTML = '';
 
-            // Add auto-refresh indicator
-            const refreshIndicator = document.createElement('div');
-            refreshIndicator.style.textAlign = 'center';
-            refreshIndicator.style.padding = '15px';
-            refreshIndicator.style.background = 'var(--background)';
-            refreshIndicator.style.borderRadius = 'var(--radius)';
-            refreshIndicator.style.marginBottom = '20px';
-            refreshIndicator.style.color = 'var(--success)';
-            refreshIndicator.innerHTML = `
-                <i class="fas fa-sync-alt" style="animation: spin 2s linear infinite; margin-right: 8px;"></i>
-                Live Winners - Auto-refreshing every 30 seconds
+            // Add live winners header
+            const winnersHeader = document.createElement('div');
+            winnersHeader.style.textAlign = 'center';
+            winnersHeader.style.padding = '20px';
+            winnersHeader.style.background = 'linear-gradient(135deg, var(--primary), var(--accent))';
+            winnersHeader.style.borderRadius = 'var(--radius-lg)';
+            winnersHeader.style.marginBottom = '20px';
+            winnersHeader.style.color = 'white';
+            winnersHeader.innerHTML = `
+                <h2 style="margin: 0 0 10px 0; font-size: 1.8rem;">
+                    <i class="fas fa-crown" style="margin-right: 10px;"></i>
+                    Recent Winners
+                </h2>
+                <p style="margin: 0; opacity: 0.9;">Live contest results from completed contests</p>
             `;
-            winnersList.appendChild(refreshIndicator);
+            winnersList.appendChild(winnersHeader);
 
-            winners.forEach(winner => {
+            if (winners.length === 0) {
+                const noWinners = document.createElement('div');
+                noWinners.className = 'data-item';
+                noWinners.innerHTML = `
+                    <div class="data-item-info" style="text-align: center; padding: 40px;">
+                        <div class="data-item-title" style="color: var(--text-light);">
+                            <i class="fas fa-trophy" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i><br>
+                            No winners yet
+                        </div>
+                        <div class="data-item-subtitle">Winners will appear here when contests are completed</div>
+                    </div>
+                `;
+                winnersList.appendChild(noWinners);
+                return;
+            }
+
+            winners.forEach((winner, index) => {
                 const winnerItem = document.createElement('div');
                 winnerItem.className = 'data-item';
+                
+                // Add position badge for top 3 (no bot indicators)
+                let positionBadge = '';
+                if (index === 0) {
+                    positionBadge = `<span style="background: gold; color: #000; font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600;">🥇 NEW</span>`;
+                } else if (index === 1) {
+                    positionBadge = `<span style="background: silver; color: #000; font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600;">🥈</span>`;
+                } else if (index === 2) {
+                    positionBadge = `<span style="background: #cd7f32; color: #fff; font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600;">🥉</span>`;
+                }
+
                 winnerItem.innerHTML = `
                     <div class="data-item-info">
-                        <div class="data-item-title">${winner.name}</div>
+                        <div class="data-item-title">
+                            ${winner.name}${positionBadge}
+                            ${winner.position ? `<span style="color: var(--warning); font-size: 0.9rem; margin-left: 8px;">(${winner.position})</span>` : ''}
+                        </div>
                         <div class="data-item-subtitle">${winner.contest} • ${winner.date}</div>
                     </div>
-                    <div class="data-item-value">₹${winner.prize.toLocaleString()}</div>
+                    <div class="data-item-value" style="color: var(--success); font-weight: 700;">
+                        ₹${winner.prize.toLocaleString()}
+                    </div>
                 `;
                 winnersList.appendChild(winnerItem);
             });
 
-            // Auto-refresh winners every 30 seconds
+            // Show auto-refresh for demo purposes
+            startWinnersAutoRefresh();
+        }
+
+        function startWinnersAutoRefresh() {
+            // Auto-refresh winners every 30 seconds (only for demo purposes)
             if (!window.winnersRefreshInterval) {
                 window.winnersRefreshInterval = setInterval(() => {
-                    // Simulate new winners being added
-                    if (Math.random() > 0.7) {
-                        const randomNames = ['Rahul Sharma', 'Priya Singh', 'Amit Kumar', 'Sneha Patel', 'Vijay Gupta', 'Anita Yadav'];
-                        const randomContests = ['Mega Jackpot', 'Speed Earning', 'Golden Fortune', 'Festival Special'];
-                        const randomPrizes = [5000, 10000, 15000, 25000, 50000];
-                        
+                    // Add simulated winners occasionally for demo effect
+                    if (winners.length < 3 && Math.random() > 0.7) {
                         const newWinner = {
-                            name: randomNames[Math.floor(Math.random() * randomNames.length)],
-                            contest: randomContests[Math.floor(Math.random() * randomContests.length)],
-                            prize: randomPrizes[Math.floor(Math.random() * randomPrizes.length)],
-                            date: 'Just now'
+                            name: generateIndianName(),
+                            contest: ['Mega Jackpot', 'Speed Earning', 'Golden Fortune', 'Festival Special'][Math.floor(Math.random() * 4)],
+                            prize: [5000, 10000, 15000, 25000, 50000][Math.floor(Math.random() * 5)],
+                            date: 'Just now',
+                            isBot: false // All winners appear as real users
                         };
                         
                         winners.unshift(newWinner);
