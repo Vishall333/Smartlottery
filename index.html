@@ -144,6 +144,9 @@ function renderWithdrawalHistory() {
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
     <!-- Cashfree SDK -->
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 
@@ -1974,7 +1977,7 @@ function renderWithdrawalHistory() {
             document.getElementById('loginForm').style.display = 'block';
         }
 
-        // OTP functions
+        // OTP functions with enhanced input handling
         function moveToNext(current, nextId) {
             if (current.value.length === 1 && nextId) {
                 document.getElementById(nextId).focus();
@@ -1997,16 +2000,108 @@ function renderWithdrawalHistory() {
             }
         }
 
+        // Add event listeners for better OTP input experience
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add backspace handling for OTP inputs
+            for (let i = 1; i <= 6; i++) {
+                const otpInput = document.getElementById(`otp${i}`);
+                if (otpInput) {
+                    otpInput.addEventListener('keydown', function(e) {
+                        if (e.key === 'Backspace' && this.value === '') {
+                            const prevId = 'otp' + (i - 1);
+                            const prevInput = document.getElementById(prevId);
+                            if (prevInput) {
+                                prevInput.focus();
+                                prevInput.value = '';
+                            }
+                        }
+                    });
+
+                    // Only allow numeric input
+                    otpInput.addEventListener('input', function(e) {
+                        this.value = this.value.replace(/[^0-9]/g, '');
+                    });
+                }
+            }
+        });
+
+        // EmailJS Configuration
+        const EMAILJS_CONFIG = {
+            serviceId: 'service_47qlupj',
+            templateId: 'template_35nhbfg',
+            userId: 'O6aKZploNxWhUqVFU'
+        };
+
+        // Initialize EmailJS when DOM is loaded
+        let emailjsInitialized = false;
+        let currentOTP = '';
+
+        function initializeEmailJS() {
+            try {
+                if (typeof emailjs !== 'undefined') {
+                    emailjs.init(EMAILJS_CONFIG.userId);
+                    emailjsInitialized = true;
+                    console.log('✅ EmailJS initialized successfully');
+                } else {
+                    console.warn('⚠️ EmailJS not available, using fallback');
+                }
+            } catch (error) {
+                console.error('EmailJS initialization error:', error);
+            }
+        }
+
         function generateOTP() {
             return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
-        function sendOTPEmail(email, otp) {
-            // In a real application, this would send an email
-            console.log(`OTP ${otp} sent to ${email}`);
-            showNotification(`OTP sent to ${email}`, 'success');
-            // For testing, show the OTP in console
-            console.log(`Test OTP: ${otp}`);
+        async function sendOTPEmail(email, otp) {
+            try {
+                console.log('Attempting to send OTP...', { email, otp });
+                
+                // Store OTP for verification regardless of email success
+                currentOTP = otp;
+                const otpData = {
+                    otp: otp,
+                    expiresAt: Date.now() + (10 * 60 * 1000),
+                    email: email
+                };
+                localStorage.setItem('otpData', JSON.stringify(otpData));
+
+                if (emailjsInitialized && typeof emailjs !== 'undefined') {
+                    const templateParams = {
+                        to_email: email,
+                        otp_code: otp,
+                        user_name: pendingUserData?.name || 'User',
+                        message: `Your Smart Lottery Pro verification code is: ${otp}. This code will expire in 10 minutes.`
+                    };
+
+                    const response = await emailjs.send(
+                        EMAILJS_CONFIG.serviceId,
+                        EMAILJS_CONFIG.templateId,
+                        templateParams
+                    );
+
+                    if (response.status === 200) {
+                        console.log('✅ OTP sent via EmailJS');
+                        showNotification(`Verification code sent to ${email}`, 'success');
+                        startOTPCountdown();
+                        return;
+                    }
+                }
+                
+                // Fallback for development/testing
+                console.log('📧 Using fallback - OTP:', otp);
+                showNotification(`Development Mode - OTP: ${otp}`, 'success');
+                startOTPCountdown();
+
+            } catch (error) {
+                console.error('Email sending error:', error);
+                
+                // Always allow signup to proceed with visible OTP
+                console.log('📧 Fallback OTP:', otp);
+                showNotification(`Email failed - Your OTP: ${otp}`, 'error');
+                startOTPCountdown();
+            }
         }
 
         function verifyOTP() {
@@ -2021,27 +2116,63 @@ function renderWithdrawalHistory() {
                 return;
             }
 
-            // For testing, accept any 6-digit OTP
-            // In production, verify against the sent OTP
-            showNotification('Email verified successfully!', 'success');
+            try {
+                // Check against current OTP first
+                if (otpString === currentOTP) {
+                    showNotification('✅ Email verified successfully!', 'success');
+                    completeSignupProcess();
+                    return;
+                }
 
-            // Complete the signup process
-            completeSignup();
-        }
+                // Check stored OTP data as fallback
+                const storedOTPData = localStorage.getItem('otpData');
+                if (storedOTPData) {
+                    const otpData = JSON.parse(storedOTPData);
+                    
+                    // Check if OTP has expired
+                    if (Date.now() > otpData.expiresAt) {
+                        showNotification('OTP has expired. Please request a new one.', 'error');
+                        localStorage.removeItem('otpData');
+                        clearOTPFields();
+                        return;
+                    }
 
-        function resendOTP() {
-            if (pendingUserData) {
-                const newOTP = generateOTP();
-                sendOTPEmail(pendingUserData.email, newOTP);
-                // Store the new OTP for verification
-                pendingUserData.otp = newOTP;
+                    // Verify stored OTP
+                    if (otpString === otpData.otp) {
+                        showNotification('✅ Email verified successfully!', 'success');
+                        localStorage.removeItem('otpData');
+                        completeSignupProcess();
+                        return;
+                    }
+                }
+
+                // Invalid OTP
+                showNotification('❌ Invalid OTP. Please try again.', 'error');
+                clearOTPFields();
+
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                showNotification('❌ Error verifying OTP. Please try again.', 'error');
+                clearOTPFields();
             }
         }
 
-        async function completeSignup() {
-            if (!pendingUserData) return;
+        function clearOTPFields() {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`otp${i}`).value = '';
+            }
+            document.getElementById('otp1').focus();
+        }
+
+        async function completeSignupProcess() {
+            if (!pendingUserData) {
+                showNotification('❌ Signup data missing. Please try again.', 'error');
+                return;
+            }
 
             try {
+                showNotification('🚀 Creating your account...', 'success');
+
                 // Create user in Firebase Auth
                 const userCredential = await auth.createUserWithEmailAndPassword(
                     pendingUserData.email, 
@@ -2067,17 +2198,77 @@ function renderWithdrawalHistory() {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                // Clear pending data
                 pendingUserData = null;
-                showNotification('Account created successfully!', 'success');
-
+                currentOTP = '';
+                
                 // Hide OTP form
                 document.getElementById('otpVerification').style.display = 'none';
+                
+                showNotification('🎉 Account created successfully! Welcome to Smart Lottery Pro!', 'success');
 
             } catch (error) {
-                console.error('Complete signup error:', error);
-                showNotification('Failed to complete signup. Please try again.', 'error');
+                console.error('Signup completion error:', error);
+                
+                let errorMessage = 'Failed to create account. Please try again.';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'This email is already registered. Please try logging in instead.';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'Password is too weak. Please choose a stronger password.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'Invalid email address. Please check and try again.';
+                }
+                
+                showNotification('❌ ' + errorMessage, 'error');
             }
         }
+
+        function resendOTP() {
+            if (pendingUserData) {
+                const newOTP = generateOTP();
+                sendOTPEmail(pendingUserData.email, newOTP);
+                
+                // Update pending user data with new OTP
+                pendingUserData.otp = newOTP;
+                
+                showNotification('New verification code sent!', 'success');
+            }
+        }
+
+        function startOTPCountdown() {
+            const countdownElement = document.getElementById('otpCountdown');
+            if (!countdownElement) {
+                // Create countdown element if it doesn't exist
+                const otpContainer = document.querySelector('.otp-container');
+                const countdown = document.createElement('div');
+                countdown.id = 'otpCountdown';
+                countdown.style.marginTop = '15px';
+                countdown.style.fontSize = '0.9rem';
+                countdown.style.color = 'var(--text-light)';
+                otpContainer.appendChild(countdown);
+            }
+
+            let timeLeft = 600; // 10 minutes in seconds
+            
+            const timer = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                
+                document.getElementById('otpCountdown').textContent = 
+                    `Code expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                timeLeft--;
+                
+                if (timeLeft < 0) {
+                    clearInterval(timer);
+                    document.getElementById('otpCountdown').textContent = 'Code expired. Please request a new one.';
+                    document.getElementById('otpCountdown').style.color = 'var(--error)';
+                    localStorage.removeItem('otpData');
+                }
+            }, 1000);
+        }
+
+        
 
         // Utility function to generate transaction ID
         function generateTransactionId() {
@@ -2107,6 +2298,9 @@ function renderWithdrawalHistory() {
                 } catch (err) {
                     console.log('⚠️ Firestore persistence failed:', err);
                 }
+
+                // Initialize EmailJS
+                initializeEmailJS();
 
                 // Initialize Cashfree
                 if (typeof Cashfree !== 'undefined') {
