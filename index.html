@@ -2369,23 +2369,70 @@ function renderWithdrawalHistory() {
             document.getElementById('landingSection').style.display = 'block';
         }
 
-        function loadDemoContests() {
-            const contests = CONTEST_TEMPLATES.map(template => ({
-                ...template,
-                currentParticipants: Math.floor(Math.random() * (template.maxParticipants * 0.4)) + 50,
-                endTime: new Date(Date.now() + template.duration),
-                status: 'active',
-                participants: [],
-                createdAt: new Date(),
-                isActive: true
-            }));
+        async function loadDemoContests() {
+            try {
+                // First try to load existing contests from Firestore
+                const contestsSnapshot = await db.collection('activeContests').get();
+                
+                if (!contestsSnapshot.empty) {
+                    // Load existing contests
+                    const existingContests = contestsSnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            ...data,
+                            endTime: data.endTime.toDate ? data.endTime.toDate() : new Date(data.endTime),
+                            createdAt: data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
+                        };
+                    });
+                    
+                    activeContests = existingContests;
+                    console.log('✅ Loaded existing contests from Firestore');
+                } else {
+                    // Create fresh contests only if none exist
+                    const contests = CONTEST_TEMPLATES.map(template => ({
+                        ...template,
+                        currentParticipants: Math.floor(Math.random() * (template.maxParticipants * 0.4)) + 50,
+                        endTime: new Date(Date.now() + template.duration),
+                        status: 'active',
+                        participants: [],
+                        createdAt: new Date(),
+                        isActive: true
+                    }));
 
-            activeContests = contests;
-            renderContests(contests);
+                    // Save new contests to Firestore
+                    const batch = db.batch();
+                    contests.forEach(contest => {
+                        const contestRef = db.collection('activeContests').doc(contest.id);
+                        batch.set(contestRef, contest);
+                    });
+                    await batch.commit();
 
-            // If admin is logged in, render admin contests
-            if (isAdmin) {
-                renderAdminContests();
+                    activeContests = contests;
+                    console.log('✅ Created and saved new contests to Firestore');
+                }
+
+                renderContests(activeContests);
+
+                // If admin is logged in, render admin contests
+                if (isAdmin) {
+                    renderAdminContests();
+                }
+            } catch (error) {
+                console.error('Error loading contests:', error);
+                // Fallback to local contests if Firestore fails
+                const contests = CONTEST_TEMPLATES.map(template => ({
+                    ...template,
+                    currentParticipants: Math.floor(Math.random() * (template.maxParticipants * 0.4)) + 50,
+                    endTime: new Date(Date.now() + template.duration),
+                    status: 'active',
+                    participants: [],
+                    createdAt: new Date(),
+                    isActive: true
+                }));
+
+                activeContests = contests;
+                renderContests(contests);
+                console.log('⚠️ Using fallback local contests');
             }
         }
 
@@ -2701,6 +2748,16 @@ function renderWithdrawalHistory() {
                             if (contest && contest.status === 'active') {
                                 contest.status = 'ended';
                                 
+                                // Save status change to Firestore
+                                try {
+                                    db.collection('activeContests').doc(contestId).update({
+                                        status: 'ended',
+                                        endedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                    });
+                                } catch (error) {
+                                    console.error('Error updating contest status:', error);
+                                }
+                                
                                 // Show timeout popup and handle results
                                 showContestTimeoutPopup(contestId);
                             }
@@ -2806,7 +2863,7 @@ function renderWithdrawalHistory() {
             contestRestartTimers.set(contestId, restartTimer);
         }
 
-        function restartContest(contestId) {
+        async function restartContest(contestId) {
             const contest = activeContests.find(c => c.id === contestId);
             if (!contest) return;
 
@@ -2829,6 +2886,14 @@ function renderWithdrawalHistory() {
                     createdAt: new Date(),
                     isActive: true
                 };
+
+                try {
+                    // Save updated contest to Firestore
+                    await db.collection('activeContests').doc(contestId).set(newContest);
+                    console.log('✅ Contest restart saved to Firestore');
+                } catch (error) {
+                    console.error('Error saving restarted contest:', error);
+                }
 
                 // Replace the old contest with the new one
                 const contestIndex = activeContests.findIndex(c => c.id === contestId);
@@ -3636,6 +3701,17 @@ function renderWithdrawalHistory() {
                 const contestIndex = activeContests.findIndex(c => c.id === contestId);
                 if (contestIndex !== -1) {
                     activeContests[contestIndex].status = 'completed';
+                    
+                    // Save completion status to Firestore
+                    try {
+                        await db.collection('activeContests').doc(contestId).update({
+                            status: 'completed',
+                            completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            winnersCount: winners.length
+                        });
+                    } catch (error) {
+                        console.error('Error updating contest completion status:', error);
+                    }
                 }
 
                 // Add winners to recent winners list with realistic timing
