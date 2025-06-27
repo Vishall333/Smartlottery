@@ -4887,53 +4887,130 @@ function updatePaymentSummary() {
 }
 
 async function handleWithdrawal() {
-  const amount = parseFloat(document.getElementById('withdrawalAmount').value);
-  const account = document.getElementById('withdrawalAccount').value.trim();
-  const ifsc = document.getElementById('withdrawalIFSC').value.trim();
+            if (!currentUser) {
+                showNotification('Please login first', 'error');
+                return;
+            }
 
-  if (!amount || amount < 500) {
-    showNotification('Minimum withdrawal amount is ₹500', 'error');
-    return;
-  }
+            const amount = parseInt(document.getElementById('withdrawalAmount').value);
 
-  if (!account || !ifsc) {
-    showNotification('Please enter valid account number and IFSC code', 'error');
-    return;
-  }
+            if (!amount || amount < 500) {
+                showNotification('Minimum withdrawal amount is ₹500', 'error');
+                return;
+            }
 
-  if (userBalance < amount) {
-    showNotification('Insufficient balance', 'error');
-    return;
-  }
+            if (amount > userBalance) {
+                showNotification('Insufficient balance', 'error');
+                return;
+            }
 
-  try {
-    const withdrawalData = {
-      uid: currentUser.uid,
-      amount,
-      method: 'bank',
-      account,
-      ifsc,
-      status: 'pending',
-      requestedAt: new Date().toISOString()
-    };
+            const account = document.getElementById('withdrawalAccount').value.trim();
+            const ifsc = document.getElementById('withdrawalIFSC').value.trim();
+            const accountName = document.getElementById('withdrawalAccountName').value.trim();
+            const upiId = document.getElementById('withdrawalUPI').value.trim();
 
-    await db.collection('withdrawals').add(withdrawalData);
-    await db.collection('users').doc(currentUser.uid).update({
-      balance: firebase.firestore.FieldValue.increment(-amount)
-    });
+            if (!account || !ifsc || !accountName) {
+                showNotification('Please fill in all required bank details', 'error');
+                return;
+            }
 
-    userBalance -= amount;
-    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+            // Validate UPI ID format if provided
+            if (upiId) {
+                const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z0-9][a-zA-Z0-9.-]{1,64}$/;
+                if (!upiRegex.test(upiId)) {
+                    showNotification('Please enter a valid UPI ID format', 'error');
+                    return;
+                }
+            }
 
-    showNotification('Withdrawal request submitted successfully', 'success');
-    document.getElementById('withdrawalAmount').value = '';
-    document.getElementById('withdrawalAccount').value = '';
-    document.getElementById('withdrawalIFSC').value = '';
-  } catch (err) {
-    console.error('Withdrawal error:', err);
-    showNotification('Withdrawal failed. Please try again.', 'error');
-  }
-}
+            const withdrawalDetails = {
+                bankAccount: account,
+                ifscCode: ifsc,
+                accountName: accountName,
+                upiId: upiId || null,
+                method: 'netbanking'
+            };
+
+            const description = upiId ? 
+                `Net Banking withdrawal to ***${account.slice(-4)} (UPI: ${upiId})` : 
+                `Net Banking withdrawal to ***${account.slice(-4)}`;
+
+            try {
+                showNotification('Processing withdrawal request...', 'success');
+                
+                const userRef = db.collection('users').doc(currentUser.uid);
+
+                const withdrawalTransaction = {
+                    id: generateTransactionId(),
+                    type: 'withdrawal',
+                    amount: -amount,
+                    description: description,
+                    timestamp: new Date(),
+                    status: 'pending_approval',
+                    adminApprovalRequired: true,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    time: new Date().toLocaleTimeString('en-IN'),
+                    paymentVerified: false,
+                    ...withdrawalDetails
+                };
+
+                // Create pending withdrawal for admin approval
+                const pendingWithdrawal = {
+                    ...withdrawalTransaction,
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    userName: currentUser.displayName || 'Unknown User',
+                    requestedAt: new Date(),
+                    approvalStatus: 'pending'
+                };
+
+                const batch = db.batch();
+
+                // Update user balance (temporarily deduct)
+                batch.update(userRef, {
+                    balance: firebase.firestore.FieldValue.increment(-amount),
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Add transaction to user's collection
+                const transactionRef = userRef.collection('transactions').doc();
+                batch.set(transactionRef, withdrawalTransaction);
+
+                // Add to pending withdrawals collection for admin approval
+                const pendingRef = db.collection('pendingWithdrawals').doc();
+                batch.set(pendingRef, pendingWithdrawal);
+
+                await batch.commit();
+
+                // Update local state
+                userBalance -= amount;
+                transactions.unshift(withdrawalTransaction);
+                withdrawalHistory.unshift(withdrawalTransaction);
+
+                document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                renderTransactions();
+                renderWithdrawalHistory();
+                updateProfileStats();
+
+                // Clear form
+                document.getElementById('withdrawalAmount').value = '';
+                document.getElementById('withdrawalAccount').value = '';
+                document.getElementById('withdrawalIFSC').value = '';
+                document.getElementById('withdrawalAccountName').value = '';
+                document.getElementById('withdrawalUPI').value = '';
+
+                showNotification('✅ Withdrawal request submitted for admin approval!', 'success');
+
+                // If user is admin, show pending withdrawals
+                if (isAdmin) {
+                    loadPendingWithdrawals();
+                }
+
+            } catch (error) {
+                console.error('❌ Error processing withdrawal:', error);
+                showNotification('Failed to process withdrawal. Please try again.', 'error');
+            }
+        }
 
 
 </script>
