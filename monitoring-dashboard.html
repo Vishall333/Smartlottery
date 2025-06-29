@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Lottery Pro - System Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .status-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px; 
+        }
+        .status-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-good { background: #4CAF50; }
+        .status-warning { background: #FF9800; }
+        .status-error { background: #F44336; }
+        .test-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .test-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .test-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .log-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .alert-section {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #FFC107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎰 Smart Lottery Pro - System Monitor</h1>
+            <p>Real-time monitoring and testing dashboard</p>
+        </div>
+
+        <div class="alert-section" id="alertSection">
+            <h3>🚨 System Alerts</h3>
+            <div id="alerts">Loading alerts...</div>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <h3><span class="status-indicator status-good"></span>Server Status</h3>
+                <p id="serverStatus">Checking...</p>
+                <small id="uptime">Uptime: Calculating...</small>
+            </div>
+            
+            <div class="status-card">
+                <h3><span class="status-indicator status-warning"></span>Contest System</h3>
+                <p id="contestStatus">Checking...</p>
+                <small>Auto-result declaration active</small>
+            </div>
+            
+            <div class="status-card">
+                <h3><span class="status-indicator status-good"></span>Payment System</h3>
+                <p id="paymentStatus">Checking...</p>
+                <small>Cashfree integration active</small>
+            </div>
+            
+            <div class="status-card">
+                <h3><span class="status-indicator status-good"></span>Firebase</h3>
+                <p id="firebaseStatus">Checking...</p>
+                <small>Authentication & Firestore</small>
+            </div>
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-btn" onclick="runTest('health-check')">🏥 Health Check</button>
+            <button class="test-btn" onclick="runTest('test-contests')">🎰 Test Contests</button>
+            <button class="test-btn" onclick="runTest('test-payments')">💳 Test Payments</button>
+            <button class="test-btn" onclick="runTest('test-auth')">🔐 Test Auth</button>
+            <button class="test-btn" onclick="runTest('test-firebase')">🔥 Test Firebase</button>
+            <button class="test-btn" onclick="runTest('performance')">📊 Performance</button>
+        </div>
+
+        <div class="log-section">
+            <h3>📝 System Logs</h3>
+            <div id="logs"></div>
+        </div>
+    </div>
+
+    <script>
+        let logCount = 0;
+        
+        function addLog(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+            
+            // Keep only last 50 logs
+            if (logsDiv.children.length > 50) {
+                logsDiv.removeChild(logsDiv.lastChild);
+            }
+        }
+
+        async function runTest(endpoint) {
+            addLog(`🧪 Running test: ${endpoint}`);
+            try {
+                const response = await fetch(`/api/${endpoint}`);
+                const result = await response.json();
+                addLog(`✅ ${endpoint} completed: ${JSON.stringify(result.status || 'success')}`);
+                
+                if (result.recommendations) {
+                    result.recommendations.forEach(rec => {
+                        addLog(`💡 Recommendation: ${rec}`);
+                    });
+                }
+            } catch (error) {
+                addLog(`❌ ${endpoint} failed: ${error.message}`);
+            }
+        }
+
+        async function updateDashboard() {
+            try {
+                const response = await fetch('/api/dashboard-data');
+                const data = await response.json();
+                
+                document.getElementById('serverStatus').textContent = `Status: ${data.serverStatus}`;
+                document.getElementById('uptime').textContent = `Uptime: ${Math.floor(data.lastUpdate ? 0 : 60)} minutes`;
+                document.getElementById('contestStatus').textContent = `Active: ${data.activeContests || 0} contests`;
+                document.getElementById('paymentStatus').textContent = `Transactions: ${data.totalTransactions || 0}`;
+                document.getElementById('firebaseStatus').textContent = `Connected - ${data.activeUsers || 0} users`;
+                
+                // Update alerts
+                const alertsDiv = document.getElementById('alerts');
+                if (data.alerts && data.alerts.length > 0) {
+                    alertsDiv.innerHTML = data.alerts.map(alert => `<div>⚠️ ${alert}</div>`).join('');
+                } else {
+                    alertsDiv.innerHTML = '✅ No active alerts';
+                }
+                
+            } catch (error) {
+                addLog(`❌ Dashboard update failed: ${error.message}`);
+            }
+        }
+
+        // Initialize dashboard
+        addLog('🚀 System monitor initialized');
+        updateDashboard();
+        
+        // Update every 30 seconds
+        setInterval(updateDashboard, 30000);
+        
+        // Run initial health check
+        setTimeout(() => runTest('health-check'), 2000);
+    </script>
+</body>
+</html>
