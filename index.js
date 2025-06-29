@@ -1,45 +1,19 @@
 
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const axios = require("axios");
-admin.initializeApp();
+const express = require('express');
+const path = require('path');
 
-// Replace with your real Cashfree production keys
-const CASHFREE_CLIENT_ID = "your_client_id";
-const CASHFREE_SECRET_KEY = "your_secret_key";
-const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-exports.createCashfreeOrder = functions.https.onCall(async (data, context) => {
-    try {
-        const { order_id, order_amount, customer_id, customer_email, customer_phone } = data;
+// Serve static files
+app.use(express.static(path.join(__dirname)));
 
-        if (!order_id || !order_amount || !customer_id || !customer_email || !customer_phone) {
-            throw new functions.https.HttpsError('invalid-argument', 'Missing required parameters');
-        }
+// Route for the main page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'attached_assets', 'index_firebase_1751175740956.html'));
+});
 
-        const orderData = {
-            order_id,
-            order_amount,
-            order_currency: "INR",
-            customer_details: {
-                customer_id,
-                customer_email,
-                customer_phone
-            }
-        };
-
-        const response = await axios.post(CASHFREE_API_URL, orderData, {
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-version": "2023-08-01",
-                "x-client-id": CASHFREE_CLIENT_ID,
-                "x-client-secret": CASHFREE_SECRET_KEY
-            }
-        });
-
-        return response.data;
-    } catch (error) {
-        console.error("Cashfree order creation error:", error.response?.data || error.message);
-        throw new functions.https.HttpsError("internal", "Failed to create Cashfree order");
-    }
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
 });
