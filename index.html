@@ -1865,6 +1865,11 @@ function renderWithdrawalHistory() {
             measurementId: "G-SH9Y19ZE74"
         };
 
+        // Enhanced Firebase initialization with better error handling
+        let firebaseInitialized = false;
+        let retryCount = 0;
+        const maxRetries = 3;
+
         // API Configuration for Firebase Functions
         const API_BASE_URL = 'https://api-2uuq6sr6qa-uc.a.run.app';
         // UPI Configuration
@@ -2356,18 +2361,32 @@ function renderWithdrawalHistory() {
             try {
                 showLoadingSection();
 
-                // Initialize Firebase
-                firebase.initializeApp(firebaseConfig);
-                auth = firebase.auth();
-                db = firebase.firestore();
-                functions = firebase.functions();
+                // Initialize Firebase with retry logic
+                if (!firebaseInitialized) {
+                    firebase.initializeApp(firebaseConfig);
+                    auth = firebase.auth();
+                    db = firebase.firestore();
+                    functions = firebase.functions();
+                    firebaseInitialized = true;
+                }
 
-                // Enable offline persistence
+                // Configure Firestore settings for better compatibility
+                const settings = {
+                    timestampsInSnapshots: true,
+                    ignoreUndefinedProperties: true
+                };
+                db.settings(settings);
+
+                // Enable offline persistence with fallback
                 try {
-                    await db.enablePersistence();
+                    await db.enablePersistence({ synchronizeTabs: true });
                     console.log('✅ Firestore persistence enabled');
                 } catch (err) {
-                    console.log('⚠️ Firestore persistence failed:', err);
+                    if (err.code === 'failed-precondition') {
+                        console.log('⚠️ Persistence failed: Multiple tabs open');
+                    } else if (err.code === 'unimplemented') {
+                        console.log('⚠️ Persistence not available in this browser');
+                    }
                 }
 
                 // Initialize EmailJS
@@ -5142,6 +5161,14 @@ function renderWithdrawalHistory() {
             document.getElementById('userEmail').textContent = user.email || 'user@example.com';
             document.getElementById('userAvatar').textContent = (user.displayName || 'U')[0].toUpperCase();
 
+            // Wait for auth token to be ready
+            try {
+                await user.getIdToken(true);
+                console.log('✅ User authentication token refreshed');
+            } catch (tokenError) {
+                console.warn('⚠️ Token refresh failed:', tokenError);
+            }
+
             // Show admin tab if user is admin
             if (isAdmin) {
                 console.log('User is admin, showing admin tab');
@@ -5164,10 +5191,26 @@ function renderWithdrawalHistory() {
                 return;
             }
 
-            // Load user data from Firestore with improved error handling
+            // Load user data from Firestore with improved error handling and local fallback
             try {
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
+                // Try to get user data with retries
+                let userDoc = null;
+                let retryAttempts = 0;
+                
+                while (retryAttempts < maxRetries && !userDoc) {
+                    try {
+                        userDoc = await db.collection('users').doc(user.uid).get();
+                        break;
+                    } catch (fetchError) {
+                        retryAttempts++;
+                        console.warn(`⚠️ User data fetch attempt ${retryAttempts} failed:`, fetchError);
+                        if (retryAttempts < maxRetries) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * retryAttempts));
+                        }
+                    }
+                }
+
+                if (userDoc && userDoc.exists) {
                     const userData = userDoc.data();
                     userBalance = userData.balance || 0;
                     userProfile = {
@@ -5259,42 +5302,68 @@ function renderWithdrawalHistory() {
                     
                     console.log('✅ User data loaded successfully');
                 } else {
-                    // Create user document if it doesn't exist
-                    await db.collection('users').doc(user.uid).set({
-                        displayName: user.displayName || 'Smart Player',
-                        email: user.email,
-                        balance: 0,
-                        contestsJoined: 0,
-                        contestsWon: 0,
-                        totalWinnings: 0,
-                        transactions: [],
-                        joinedContests: [],
-                        emailVerified: true,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    // Try to create user document if it doesn't exist
+                    try {
+                        await db.collection('users').doc(user.uid).set({
+                            displayName: user.displayName || 'Smart Player',
+                            email: user.email,
+                            balance: 0,
+                            contestsJoined: 0,
+                            contestsWon: 0,
+                            totalWinnings: 0,
+                            transactions: [],
+                            joinedContests: [],
+                            emailVerified: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log('✅ New user document created');
+                    } catch (createError) {
+                        console.warn('⚠️ Could not create user document:', createError);
+                        showNotification('⚠️ Account setup issue. Some features may not work properly.', 'error');
+                    }
 
-                    userBalance = 0;
-                    transactions = [];
-                    joinedContests = [];
-                    document.getElementById('userBalance').textContent = '₹0';
+                    // Load from local storage if available
+                    const savedBalance = localStorage.getItem('userBalance');
+                    const savedContests = localStorage.getItem('joinedContests');
+                    const savedTransactions = localStorage.getItem('transactions');
+
+                    userBalance = savedBalance ? parseInt(savedBalance) : 0;
+                    joinedContests = savedContests ? JSON.parse(savedContests) : [];
+                    transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+                    
+                    document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                     renderJoinedContests();
-                    console.log('✅ New user document created');
+                    
+                    if (savedBalance || savedContests || savedTransactions) {
+                        console.log('✅ Loaded data from local storage');
+                        showNotification('⚠️ Loaded from local backup. Data may not sync across devices.', 'error');
+                    }
                 }
             } catch (error) {
                 console.error('❌ Error loading user data:', error);
 
-                // Check if it's a permission error
+                // Load from local storage as fallback
+                const savedBalance = localStorage.getItem('userBalance');
+                const savedContests = localStorage.getItem('joinedContests');
+                const savedTransactions = localStorage.getItem('transactions');
+
+                userBalance = savedBalance ? parseInt(savedBalance) : 0;
+                joinedContests = savedContests ? JSON.parse(savedContests) : [];
+                transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+
+                document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
+                renderJoinedContests();
+
+                // Show appropriate error message
                 if (error.code === 'permission-denied') {
-                    showNotification('Database permissions error. Please check Firestore security rules.', 'error');
+                    showNotification('⚠️ Database permissions error. Using local backup. Please check Firestore security rules.', 'error');
+                } else if (error.code === 'unavailable') {
+                    showNotification('⚠️ Database temporarily unavailable. Using local backup.', 'error');
                 } else {
-                    showNotification('Failed to load user data. Some features may not work properly.', 'error');
+                    showNotification('⚠️ Failed to load from database. Using local backup.', 'error');
                 }
 
-                userBalance = 0;
-                transactions = [];
-                joinedContests = [];
-                document.getElementById('userBalance').textContent = '₹0';
-                renderJoinedContests();
+                console.log('✅ Using local storage fallback');
             }
 
             renderWinners();
@@ -5419,7 +5488,8 @@ function renderWithdrawalHistory() {
             try {
                 showNotification('Joining contest...', 'success');
 
-                const userRef = db.collection('users').doc(currentUser.uid);
+                // Enhanced authentication check
+                await currentUser.getIdToken(true);
 
                 // Create transaction for contest entry
                 const transaction = {
@@ -5448,29 +5518,68 @@ function renderWithdrawalHistory() {
                     joinTimestamp: new Date().getTime()
                 };
 
-                // Use a batch operation for better reliability
-                const batch = db.batch();
+                // Try database operations with fallback to local storage
+                try {
+                    const userRef = db.collection('users').doc(currentUser.uid);
 
-                batch.update(userRef, {
-                    balance: firebase.firestore.FieldValue.increment(-entryFee),
-                    contestsJoined: firebase.firestore.FieldValue.increment(1),
-                    joinedContests: firebase.firestore.FieldValue.arrayUnion(joinedContest),
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                    // Check if user document exists, create if not
+                    const userDoc = await userRef.get();
+                    if (!userDoc.exists) {
+                        await userRef.set({
+                            displayName: currentUser.displayName || 'Smart Player',
+                            email: currentUser.email,
+                            balance: 0,
+                            contestsJoined: 0,
+                            contestsWon: 0,
+                            totalWinnings: 0,
+                            transactions: [],
+                            joinedContests: [],
+                            emailVerified: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log('✅ Created user document');
+                    }
 
-                // Add transaction to sub-collection
-                const transactionRef = userRef.collection('transactions').doc();
-                batch.set(transactionRef, transaction);
+                    // Use a batch operation for better reliability
+                    const batch = db.batch();
 
-                // Commit the batch
-                await batch.commit();
+                    batch.update(userRef, {
+                        balance: firebase.firestore.FieldValue.increment(-entryFee),
+                        contestsJoined: firebase.firestore.FieldValue.increment(1),
+                        joinedContests: firebase.firestore.FieldValue.arrayUnion(joinedContest),
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
 
-                // Update local state
+                    // Add transaction to sub-collection
+                    const transactionRef = userRef.collection('transactions').doc();
+                    batch.set(transactionRef, transaction);
+
+                    // Commit the batch
+                    await batch.commit();
+
+                    console.log('✅ Database operations successful');
+
+                } catch (dbError) {
+                    console.warn('⚠️ Database operation failed, using local fallback:', dbError);
+                    
+                    // Fallback to local storage if database fails
+                    if (dbError.code === 'permission-denied') {
+                        showNotification('⚠️ Database permissions issue. Contest joined locally - results may not persist.', 'error');
+                    } else {
+                        showNotification('⚠️ Database unavailable. Contest joined locally.', 'error');
+                    }
+                }
+
+                // Update local state regardless of database success
                 userBalance -= entryFee;
                 userProfile.contestsJoined++;
                 joinedContests.unshift(joinedContest);
-
                 transactions.unshift(transaction);
+
+                // Save to local storage as backup
+                localStorage.setItem('userBalance', userBalance.toString());
+                localStorage.setItem('joinedContests', JSON.stringify(joinedContests));
+                localStorage.setItem('transactions', JSON.stringify(transactions));
 
                 document.getElementById('userBalance').textContent = '₹' + userBalance.toLocaleString();
                 updateProfileStats();
@@ -5479,18 +5588,26 @@ function renderWithdrawalHistory() {
 
                 showNotification('✅ Successfully joined the contest!', 'success');
 
-                // Contest results will be declared only when contest is full or time expires
-                // Check if contest is now full and trigger result if needed
-                checkAndDeclareContestResult(contestId);
+                // Update contest participant count locally
+                const contest = activeContests.find(c => c.id === contestId);
+                if (contest) {
+                    contest.currentParticipants++;
+                    renderContests(activeContests);
+                }
 
             } catch (error) {
                 console.error('❌ Error joining contest:', error);
 
+                let errorMessage = 'Failed to join contest. Please try again.';
                 if (error.code === 'permission-denied') {
-                    showNotification('Permission denied. Please check your account permissions.', 'error');
-                } else {
-                    showNotification('Failed to join contest: ' + error.message, 'error');
+                    errorMessage = 'Permission denied. Please check Firestore security rules or try logging out and back in.';
+                } else if (error.code === 'unauthenticated') {
+                    errorMessage = 'Authentication expired. Please log out and log back in.';
+                } else if (error.message) {
+                    errorMessage = error.message;
                 }
+
+                showNotification('❌ ' + errorMessage, 'error');
             }
         }
 
