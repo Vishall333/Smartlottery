@@ -2709,15 +2709,15 @@ function renderWithdrawalHistory() {
                 clearInterval(participantUpdateInterval);
             }
 
-            // Check every 10 seconds for contest lifecycle events (more frequent)
+            // Check every 30 seconds for contest lifecycle events (proper timing)
             contestLifecycleInterval = setInterval(async () => {
                 const now = new Date();
                 let needsUpdate = false;
 
                 for (const contest of activeContests) {
                     // Check if contest has ended and needs winner declaration
-                    if (contest.status === 'active' && now >= contest.endTime) {
-                        console.log(`Contest ${contest.id} has ended, showing popup and declaring winners...`);
+                    if (contest.status === 'active' && now >= new Date(contest.endTime)) {
+                        console.log(`Contest ${contest.id} has ended at ${new Date(contest.endTime).toLocaleString()}, current time: ${now.toLocaleString()}`);
                         
                         // Prevent multiple triggers
                         if (contest.endingInProgress) continue;
@@ -2728,23 +2728,27 @@ function renderWithdrawalHistory() {
                             contest.status = 'ended';
                             contest.endedAt = new Date();
                             
-                            // Show popup immediately when contest ends
-                            showContestEndedPopup(contest.id);
+                            // For admin users, just mark as ready for declaration
+                            if (isAdmin) {
+                                contest.status = 'ready_for_declaration';
+                                showNotification(`⏰ Contest "${contest.title}" ended - Ready for admin declaration`, 'success');
+                            } else {
+                                // For regular users, auto-declare after proper timeline
+                                setTimeout(async () => {
+                                    console.log(`Auto-declaring winners for contest ${contest.id} after timeline completion`);
+                                    await declareAutomaticWinners(contest.id);
+                                    showNotification(`🎉 Contest "${contest.title}" results declared! Check winners list.`, 'success');
+                                }, 30000); // 30 seconds delay for proper timeline
+                            }
                             
-                            // Auto-declare winners after 2 minutes for better user experience
-                            setTimeout(async () => {
-                                console.log(`Auto-declaring winners for contest ${contest.id} after 2 minutes`);
-                                await declareAutomaticWinners(contest.id);
-                                
-                                // Show completion notification to all users
-                                showNotification(`🎉 Contest "${contest.title}" results declared! Check winners list.`, 'success');
-                            }, 2 * 60 * 1000); // 2 minutes
+                            // Schedule restart according to contest cycle
+                            const template = CONTEST_TEMPLATES.find(t => t.id === contest.id);
+                            const restartDelay = template ? (template.cycleDuration || 24 * 60 * 60 * 1000) : 24 * 60 * 60 * 1000;
                             
-                            // Schedule restart after 5 minutes total
                             setTimeout(() => {
-                                console.log(`Scheduling restart for contest ${contest.id}`);
+                                console.log(`Auto-restarting contest ${contest.id} after cycle completion`);
                                 restartContestCycle(contest.id);
-                            }, 5 * 60 * 1000); // 5 minutes
+                            }, Math.min(restartDelay, 24 * 60 * 60 * 1000)); // Max 24 hours
                             
                         } catch (error) {
                             console.error(`Error handling contest ${contest.id} end:`, error);
@@ -2756,14 +2760,19 @@ function renderWithdrawalHistory() {
                         needsUpdate = true;
                     }
                     
-                    // Check if contest needs to be restarted (for cycles that might have been missed)
+                    // Check if contest needs to be restarted according to its natural cycle
                     if (contest.status === 'completed' && contest.completedAt) {
-                        const timeSinceCompletion = now.getTime() - contest.completedAt.getTime();
-                        // If more than 10 minutes have passed since completion, restart
-                        if (timeSinceCompletion > 10 * 60 * 1000) {
-                            console.log(`Contest ${contest.id} overdue for restart, restarting now...`);
-                            await restartContestCycle(contest.id);
-                            needsUpdate = true;
+                        const template = CONTEST_TEMPLATES.find(t => t.id === contest.id);
+                        if (template) {
+                            const timeSinceCompletion = now.getTime() - contest.completedAt.getTime();
+                            const cycleTime = template.cycleDuration || 24 * 60 * 60 * 1000;
+                            
+                            // Restart when cycle time has passed
+                            if (timeSinceCompletion >= cycleTime) {
+                                console.log(`Contest ${contest.id} cycle completed, restarting automatically...`);
+                                await restartContestCycle(contest.id);
+                                needsUpdate = true;
+                            }
                         }
                     }
                 }
@@ -2774,7 +2783,7 @@ function renderWithdrawalHistory() {
                         renderAdminContests();
                     }
                 }
-            }, 10000); // Check every 10 seconds (increased frequency)
+            }, 30000); // Check every 30 seconds for proper timing
 
             // Update participant counts - IMPROVED to only increase steadily
             participantUpdateInterval = setInterval(() => {
@@ -3647,13 +3656,525 @@ function renderWithdrawalHistory() {
         async function adminDeclareResults(contestId) {
             if (!isAdmin) return;
             
+            // Show winner selection modal
+            showWinnerSelectionModal(contestId);
+        }
+
+        function showWinnerSelectionModal(contestId) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.style.zIndex = '2000';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Declare Winners - ${contest.title}</h2>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="margin-bottom: 25px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">Contest Information</h3>
+                            <div style="background: var(--background); padding: 20px; border-radius: var(--radius);">
+                                <p><strong>Participants:</strong> ${contest.currentParticipants}/${contest.maxParticipants}</p>
+                                <p><strong>Prize Pool:</strong> ₹${contest.prizePool.toLocaleString()}</p>
+                                <p><strong>Status:</strong> ${contest.status}</p>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">Winner Selection Options</h3>
+                            
+                            <div class="upi-option" onclick="selectWinnerType('automatic')" style="margin-bottom: 15px;">
+                                <input type="radio" name="winnerType" value="automatic" checked>
+                                <div class="upi-option-content">
+                                    <i class="fas fa-robot upi-option-icon" style="color: var(--primary);"></i>
+                                    <div class="upi-option-text">
+                                        <div class="upi-option-name">Automatic Declaration</div>
+                                        <div class="upi-option-desc">System automatically selects winners from real users and bots</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="upi-option" onclick="selectWinnerType('manual_real')" style="margin-bottom: 15px;">
+                                <input type="radio" name="winnerType" value="manual_real">
+                                <div class="upi-option-content">
+                                    <i class="fas fa-user upi-option-icon" style="color: var(--success);"></i>
+                                    <div class="upi-option-text">
+                                        <div class="upi-option-name">Real Users Only</div>
+                                        <div class="upi-option-desc">Select winners only from real participating users</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="upi-option" onclick="selectWinnerType('manual_bot')" style="margin-bottom: 15px;">
+                                <input type="radio" name="winnerType" value="manual_bot">
+                                <div class="upi-option-content">
+                                    <i class="fas fa-user-robot upi-option-icon" style="color: var(--warning);"></i>
+                                    <div class="upi-option-text">
+                                        <div class="upi-option-name">Bot Winners Only</div>
+                                        <div class="upi-option-desc">Declare only auto-generated bot winners (no real user rewards)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="upi-option" onclick="selectWinnerType('mixed')" style="margin-bottom: 15px;">
+                                <input type="radio" name="winnerType" value="mixed">
+                                <div class="upi-option-content">
+                                    <i class="fas fa-users upi-option-icon" style="color: var(--accent);"></i>
+                                    <div class="upi-option-text">
+                                        <div class="upi-option-name">Mixed Winners</div>
+                                        <div class="upi-option-desc">Custom mix of real users and bots with admin control</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="color: var(--text); margin-bottom: 10px;">Additional Options</h4>
+                            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <input type="checkbox" id="updateProfiles" checked>
+                                <span>Update winner profiles automatically</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <input type="checkbox" id="forceEnd" checked>
+                                <span>Force end contest regardless of timeline</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="autoRestart" checked>
+                                <span>Auto-restart contest cycle after completion</span>
+                            </label>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button class="btn btn-primary" onclick="processWinnerDeclaration('${contestId}', this.closest('.modal'))">
+                                <i class="fas fa-trophy"></i> Declare Winners
+                            </button>
+                            <button class="btn btn-outline" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        let selectedWinnerType = 'automatic';
+
+        function selectWinnerType(type) {
+            selectedWinnerType = type;
+            document.querySelectorAll('.upi-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            document.querySelector(`input[value="${type}"]`).checked = true;
+        }
+
+        async function processWinnerDeclaration(contestId, modalElement) {
+            const updateProfiles = document.getElementById('updateProfiles').checked;
+            const forceEnd = document.getElementById('forceEnd').checked;
+            const autoRestart = document.getElementById('autoRestart').checked;
+
+            modalElement.remove();
+
             try {
-                await declareAutomaticWinners(contestId);
-                showNotification('Contest winners declared successfully!', 'success');
+                showNotification('Processing winner declaration...', 'success');
+
+                switch (selectedWinnerType) {
+                    case 'automatic':
+                        await declareAutomaticWinners(contestId, { updateProfiles, forceEnd, autoRestart });
+                        break;
+                    case 'manual_real':
+                        await declareRealUserWinners(contestId, { updateProfiles, forceEnd, autoRestart });
+                        break;
+                    case 'manual_bot':
+                        await declareBotWinners(contestId, { updateProfiles, forceEnd, autoRestart });
+                        break;
+                    case 'mixed':
+                        await declareMixedWinners(contestId, { updateProfiles, forceEnd, autoRestart });
+                        break;
+                }
+
+                showNotification('Winners declared successfully!', 'success');
                 renderAdminContests();
+                renderContests(activeContests);
+
             } catch (error) {
                 console.error('Error declaring winners:', error);
                 showNotification('Error declaring winners. Please try again.', 'error');
+            }
+        }
+
+        async function declareRealUserWinners(contestId, options = {}) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            console.log(`Admin declaring REAL USER winners for contest: ${contestId}`);
+
+            try {
+                // Get real participants from this contest
+                const usersSnapshot = await db.collection('users').get();
+                const realParticipants = [];
+
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const userJoinedContests = userData.joinedContests || [];
+                    const contestEntries = userJoinedContests.filter(jc => 
+                        jc.contestId === contestId && jc.status === 'joined'
+                    );
+
+                    if (contestEntries.length > 0) {
+                        realParticipants.push({
+                            uid: doc.id,
+                            userData: userData,
+                            entryCount: contestEntries.length
+                        });
+                    }
+                });
+
+                if (realParticipants.length === 0) {
+                    showNotification('No real participants found in this contest!', 'error');
+                    return;
+                }
+
+                console.log(`Found ${realParticipants.length} real participants`);
+
+                // Select winners from real participants only
+                const shuffled = [...realParticipants].sort(() => Math.random() - 0.5);
+                const winners = [];
+
+                // Award main prizes to real users
+                const mainPrizes = contest.prizeStructure.slice(0, 3); // First 3 prizes
+                mainPrizes.forEach((prize, index) => {
+                    if (shuffled[index]) {
+                        winners.push({
+                            uid: shuffled[index].uid,
+                            userData: shuffled[index].userData,
+                            prize: prize.amount,
+                            position: prize.position
+                        });
+                    }
+                });
+
+                // Award compensation prizes to remaining real users
+                if (contest.compensationPrizes && shuffled.length > 3) {
+                    const remainingParticipants = shuffled.slice(3);
+                    const compensationCount = Math.min(contest.compensationPrizes.total, remainingParticipants.length);
+                    
+                    for (let i = 0; i < compensationCount; i++) {
+                        winners.push({
+                            uid: remainingParticipants[i].uid,
+                            userData: remainingParticipants[i].userData,
+                            prize: contest.compensationPrizes.amount,
+                            position: '4th Prize (Compensation)'
+                        });
+                    }
+                }
+
+                // Process winner rewards
+                if (options.updateProfiles && winners.length > 0) {
+                    const batch = db.batch();
+
+                    for (const winner of winners) {
+                        const userRef = db.collection('users').doc(winner.uid);
+
+                        // Create win transaction
+                        const winTransaction = {
+                            id: generateTransactionId(),
+                            type: 'prize_win',
+                            amount: winner.prize,
+                            description: `Won ${winner.position} in ${contest.title}`,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            status: 'completed',
+                            contestId: contestId,
+                            position: winner.position,
+                            date: new Date().toLocaleDateString('en-IN'),
+                            time: new Date().toLocaleTimeString('en-IN'),
+                            paymentVerified: true,
+                            adminDeclared: true,
+                            realUserWinner: true
+                        };
+
+                        // Update user's joined contests
+                        const updatedJoinedContests = winner.userData.joinedContests.map(jc => {
+                            if (jc.contestId === contestId && jc.status === 'joined') {
+                                return {
+                                    ...jc,
+                                    status: 'won',
+                                    position: winner.position,
+                                    prizeWon: winner.prize,
+                                    contestState: 'completed',
+                                    adminDeclared: true
+                                };
+                            }
+                            return jc;
+                        });
+
+                        batch.update(userRef, {
+                            balance: firebase.firestore.FieldValue.increment(winner.prize),
+                            contestsWon: firebase.firestore.FieldValue.increment(1),
+                            totalWinnings: firebase.firestore.FieldValue.increment(winner.prize),
+                            joinedContests: updatedJoinedContests,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        // Add win transaction
+                        const winTransactionRef = userRef.collection('transactions').doc();
+                        batch.set(winTransactionRef, winTransaction);
+
+                        // Add to winners display list
+                        winners.unshift({
+                            name: winner.userData.displayName || 'Winner',
+                            contest: contest.title,
+                            prize: winner.prize,
+                            date: 'Just now',
+                            position: winner.position,
+                            isBot: false,
+                            isRealWinner: true,
+                            adminDeclared: true
+                        });
+                    }
+
+                    await batch.commit();
+                    console.log(`✅ Awarded prizes to ${winners.length} real users`);
+                }
+
+                // Update contest status
+                if (options.forceEnd) {
+                    contest.status = 'completed';
+                    contest.completedAt = new Date();
+                    contest.adminDeclared = true;
+                    contest.winnerType = 'real_users_only';
+                }
+
+                showNotification(`✅ Declared ${winners.length} real user winners!`, 'success');
+
+            } catch (error) {
+                console.error('Error declaring real user winners:', error);
+                throw error;
+            }
+        }
+
+        async function declareBotWinners(contestId, options = {}) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            console.log(`Admin declaring BOT winners for contest: ${contestId}`);
+
+            // Generate bot winners for all main prizes
+            const botWinners = contest.prizeStructure.slice(0, 3).map(prize => ({
+                name: generateIndianName(),
+                contest: contest.title,
+                prize: prize.amount,
+                date: 'Just now',
+                position: prize.position,
+                isBot: false,
+                isAutoGenerated: true,
+                adminDeclared: true,
+                botWinner: true
+            }));
+
+            // Add bot winners to display list
+            botWinners.reverse().forEach(winner => {
+                winners.unshift(winner);
+            });
+
+            // Update contest status
+            if (options.forceEnd) {
+                contest.status = 'completed';
+                contest.completedAt = new Date();
+                contest.adminDeclared = true;
+                contest.winnerType = 'bots_only';
+                contest.botWinners = botWinners;
+            }
+
+            // Keep only recent 20 winners
+            if (winners.length > 20) {
+                winners = winners.slice(0, 20);
+            }
+
+            showNotification(`✅ Declared ${botWinners.length} bot winners!`, 'success');
+        }
+
+        async function declareMixedWinners(contestId, options = {}) {
+            const contest = activeContests.find(c => c.id === contestId);
+            if (!contest) return;
+
+            console.log(`Admin declaring MIXED winners for contest: ${contestId}`);
+
+            try {
+                // Get real participants
+                const usersSnapshot = await db.collection('users').get();
+                const realParticipants = [];
+
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const userJoinedContests = userData.joinedContests || [];
+                    const hasJoinedContest = userJoinedContests.some(jc => 
+                        jc.contestId === contestId && jc.status === 'joined'
+                    );
+
+                    if (hasJoinedContest) {
+                        realParticipants.push({
+                            uid: doc.id,
+                            userData: userData
+                        });
+                    }
+                });
+
+                // Create mixed winners: some bots, some real users
+                const mixedWinners = [];
+
+                // 1st Prize: Bot winner
+                mixedWinners.push({
+                    name: generateIndianName(),
+                    contest: contest.title,
+                    prize: contest.prizeStructure[0].amount,
+                    date: 'Just now',
+                    position: '1st Prize',
+                    isBot: false,
+                    isAutoGenerated: true,
+                    botWinner: true
+                });
+
+                // 2nd Prize: Real user if available, otherwise bot
+                if (realParticipants.length > 0) {
+                    const realWinner = realParticipants[Math.floor(Math.random() * realParticipants.length)];
+                    mixedWinners.push({
+                        uid: realWinner.uid,
+                        userData: realWinner.userData,
+                        prize: contest.prizeStructure[1].amount,
+                        position: '2nd Prize',
+                        isRealWinner: true
+                    });
+                } else {
+                    mixedWinners.push({
+                        name: generateIndianName(),
+                        contest: contest.title,
+                        prize: contest.prizeStructure[1].amount,
+                        date: 'Just now',
+                        position: '2nd Prize',
+                        isBot: false,
+                        isAutoGenerated: true,
+                        botWinner: true
+                    });
+                }
+
+                // 3rd Prize: Bot winner
+                mixedWinners.push({
+                    name: generateIndianName(),
+                    contest: contest.title,
+                    prize: contest.prizeStructure[2].amount,
+                    date: 'Just now',
+                    position: '3rd Prize',
+                    isBot: false,
+                    isAutoGenerated: true,
+                    botWinner: true
+                });
+
+                // Process real winner rewards
+                if (options.updateProfiles) {
+                    const realWinners = mixedWinners.filter(w => w.isRealWinner);
+                    
+                    if (realWinners.length > 0) {
+                        const batch = db.batch();
+
+                        for (const winner of realWinners) {
+                            const userRef = db.collection('users').doc(winner.uid);
+
+                            // Create win transaction
+                            const winTransaction = {
+                                id: generateTransactionId(),
+                                type: 'prize_win',
+                                amount: winner.prize,
+                                description: `Won ${winner.position} in ${contest.title}`,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                status: 'completed',
+                                contestId: contestId,
+                                position: winner.position,
+                                date: new Date().toLocaleDateString('en-IN'),
+                                time: new Date().toLocaleTimeString('en-IN'),
+                                paymentVerified: true,
+                                adminDeclared: true,
+                                mixedWinner: true
+                            };
+
+                            // Update user's joined contests
+                            const updatedJoinedContests = winner.userData.joinedContests.map(jc => {
+                                if (jc.contestId === contestId && jc.status === 'joined') {
+                                    return {
+                                        ...jc,
+                                        status: 'won',
+                                        position: winner.position,
+                                        prizeWon: winner.prize,
+                                        contestState: 'completed',
+                                        adminDeclared: true
+                                    };
+                                }
+                                return jc;
+                            });
+
+                            batch.update(userRef, {
+                                balance: firebase.firestore.FieldValue.increment(winner.prize),
+                                contestsWon: firebase.firestore.FieldValue.increment(1),
+                                totalWinnings: firebase.firestore.FieldValue.increment(winner.prize),
+                                joinedContests: updatedJoinedContests,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+
+                            // Add win transaction
+                            const winTransactionRef = userRef.collection('transactions').doc();
+                            batch.set(winTransactionRef, winTransaction);
+                        }
+
+                        await batch.commit();
+                        console.log(`✅ Awarded prizes to ${realWinners.length} real users in mixed declaration`);
+                    }
+                }
+
+                // Add all winners to display list
+                mixedWinners.reverse().forEach(winner => {
+                    if (winner.isRealWinner) {
+                        winners.unshift({
+                            name: winner.userData.displayName || 'Winner',
+                            contest: contest.title,
+                            prize: winner.prize,
+                            date: 'Just now',
+                            position: winner.position,
+                            isBot: false,
+                            isRealWinner: true,
+                            adminDeclared: true
+                        });
+                    } else {
+                        winners.unshift(winner);
+                    }
+                });
+
+                // Update contest status
+                if (options.forceEnd) {
+                    contest.status = 'completed';
+                    contest.completedAt = new Date();
+                    contest.adminDeclared = true;
+                    contest.winnerType = 'mixed';
+                    contest.mixedWinners = mixedWinners;
+                }
+
+                // Keep only recent 20 winners
+                if (winners.length > 20) {
+                    winners = winners.slice(0, 20);
+                }
+
+                showNotification(`✅ Declared ${mixedWinners.length} mixed winners (bots + real users)!`, 'success');
+
+            } catch (error) {
+                console.error('Error declaring mixed winners:', error);
+                throw error;
             }
         }
 
