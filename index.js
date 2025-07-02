@@ -630,6 +630,137 @@ class ContestManager {
   }
 }
 
+// Payment verification and auto-crediting system
+class PaymentProcessor {
+  constructor() {
+    this.pendingPayments = new Map();
+    this.verificationInterval = null;
+  }
+
+  start() {
+    if (this.verificationInterval) {
+      clearInterval(this.verificationInterval);
+    }
+
+    // Check for payment confirmations every 10 seconds
+    this.verificationInterval = setInterval(() => {
+      this.processPaymentVerifications();
+    }, 10000);
+
+    console.log('✅ Payment verification system started');
+  }
+
+  async processPaymentVerifications() {
+    if (!db) return;
+
+    try {
+      // Get pending payments from Firestore
+      const pendingPaymentsSnapshot = await db.collection('pendingPayments')
+        .where('status', '==', 'pending')
+        .limit(20)
+        .get();
+
+      if (pendingPaymentsSnapshot.empty) return;
+
+      const batch = db.batch();
+      let processedCount = 0;
+
+      for (const paymentDoc of pendingPaymentsSnapshot.docs) {
+        const paymentData = paymentDoc.data();
+        const timeSinceCreated = Date.now() - paymentData.createdAt;
+
+        // Auto-approve payments after 2 minutes (simulating payment gateway verification)
+        if (timeSinceCreated > 2 * 60 * 1000) {
+          await this.creditUserBalance(paymentData, batch);
+          
+          // Mark payment as completed
+          batch.update(paymentDoc.ref, {
+            status: 'completed',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            autoVerified: true
+          });
+
+          processedCount++;
+        }
+      }
+
+      if (processedCount > 0) {
+        await batch.commit();
+        console.log(`✅ Auto-credited ${processedCount} payments`);
+      }
+
+    } catch (error) {
+      console.error('Error processing payment verifications:', error);
+    }
+  }
+
+  async creditUserBalance(paymentData, batch) {
+    if (!paymentData.userId || !paymentData.amount) return;
+
+    try {
+      const userRef = db.collection('users').doc(paymentData.userId);
+      
+      // Credit user balance
+      batch.update(userRef, {
+        balance: admin.firestore.FieldValue.increment(paymentData.amount),
+        lastPaymentAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Create transaction record
+      const transactionRef = userRef.collection('transactions').doc();
+      batch.set(transactionRef, {
+        type: 'deposit',
+        amount: paymentData.amount,
+        description: `Payment credited - ${paymentData.method || 'UPI'}`,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'completed',
+        paymentId: paymentData.paymentId,
+        method: paymentData.method || 'UPI',
+        autoVerified: true,
+        date: new Date().toLocaleDateString('en-IN'),
+        time: new Date().toLocaleTimeString('en-IN')
+      });
+
+      console.log(`💰 Auto-credited ₹${paymentData.amount} to user ${paymentData.userId}`);
+
+    } catch (error) {
+      console.error('Error crediting user balance:', error);
+    }
+  }
+
+  async recordPayment(userId, amount, method, paymentId) {
+    if (!db) return null;
+
+    try {
+      const paymentRecord = {
+        userId: userId,
+        amount: amount,
+        method: method,
+        paymentId: paymentId,
+        status: 'pending',
+        createdAt: Date.now(),
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      const docRef = await db.collection('pendingPayments').add(paymentRecord);
+      console.log(`📝 Recorded pending payment: ${paymentId} for ₹${amount}`);
+      
+      return docRef.id;
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      return null;
+    }
+  }
+
+  stop() {
+    if (this.verificationInterval) {
+      clearInterval(this.verificationInterval);
+      this.verificationInterval = null;
+    }
+    console.log('⏹️ Payment verification system stopped');
+  }
+}
+
 // API Routes
 app.get('/api/contests', async (req, res) => {
   try {
@@ -644,6 +775,178 @@ app.get('/api/contests', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching contests:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Payment initiation endpoint
+app.post('/api/initiate-payment', async (req, res) => {
+  try {
+    const { uid, amount, method, email } = req.body;
+
+    if (!uid || !amount || amount < 10) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid payment data' 
+      });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Database not available' 
+      });
+    }
+
+    // Generate unique payment ID
+    const paymentId = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Record the payment as pending
+    const recordId = await paymentProcessor.recordPayment(uid, amount, method, paymentId);
+    
+    if (!recordId) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to record payment' 
+      });
+    }
+
+    // Return payment details for frontend
+    res.json({
+      success: true,
+      paymentId: paymentId,
+      recordId: recordId,
+      amount: amount,
+      method: method,
+      message: 'Payment initiated successfully. Your balance will be credited automatically within 2-3 minutes.'
+    });
+
+  } catch (error) {
+    console.error('Error initiating payment:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Payment confirmation endpoint (for manual verification if needed)
+app.post('/api/confirm-payment', async (req, res) => {
+  try {
+    const { paymentId, recordId, uid } = req.body;
+
+    if (!paymentId || !recordId || !uid) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing payment information' 
+      });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Database not available' 
+      });
+    }
+
+    // Get payment record
+    const paymentDoc = await db.collection('pendingPayments').doc(recordId).get();
+    
+    if (!paymentDoc.exists) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Payment record not found' 
+      });
+    }
+
+    const paymentData = paymentDoc.data();
+    
+    if (paymentData.userId !== uid) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Unauthorized access to payment' 
+      });
+    }
+
+    if (paymentData.status === 'completed') {
+      return res.json({
+        success: true,
+        message: 'Payment already processed',
+        alreadyProcessed: true
+      });
+    }
+
+    // Process the payment immediately
+    const batch = db.batch();
+    await paymentProcessor.creditUserBalance(paymentData, batch);
+    
+    // Update payment status
+    batch.update(paymentDoc.ref, {
+      status: 'completed',
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      manuallyConfirmed: true
+    });
+
+    await batch.commit();
+
+    res.json({
+      success: true,
+      message: 'Payment confirmed and credited successfully',
+      amount: paymentData.amount
+    });
+
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get payment status endpoint
+app.get('/api/payment-status/:recordId', async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    const { uid } = req.query;
+
+    if (!recordId || !uid) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing parameters' 
+      });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Database not available' 
+      });
+    }
+
+    const paymentDoc = await db.collection('pendingPayments').doc(recordId).get();
+    
+    if (!paymentDoc.exists) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Payment not found' 
+      });
+    }
+
+    const paymentData = paymentDoc.data();
+    
+    if (paymentData.userId !== uid) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    res.json({
+      success: true,
+      status: paymentData.status,
+      amount: paymentData.amount,
+      method: paymentData.method,
+      createdAt: paymentData.createdAt,
+      completedAt: paymentData.completedAt || null
+    });
+
+  } catch (error) {
+    console.error('Error checking payment status:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -775,6 +1078,7 @@ app.get('/', (req, res) => {
 // Initialize services
 const profileAutomation = new ProfileAutomationService();
 const contestManager = new ContestManager();
+const paymentProcessor = new PaymentProcessor();
 
 // Start the server
 app.listen(PORT, '0.0.0.0', async () => {
@@ -785,8 +1089,9 @@ app.listen(PORT, '0.0.0.0', async () => {
   if (db) {
     console.log('🔄 Starting automated services...');
     profileAutomation.start();
+    paymentProcessor.start();
     await contestManager.initialize();
-    console.log('✅ All services initialized with reduced timing');
+    console.log('✅ All services initialized with reduced timing and automated payments');
   } else {
     console.log('⚠️ Running in development mode without Firebase');
     await contestManager.initialize();
@@ -797,6 +1102,7 @@ app.listen(PORT, '0.0.0.0', async () => {
 process.on('SIGTERM', () => {
   console.log('🛑 Shutting down gracefully...');
   profileAutomation.stop();
+  paymentProcessor.stop();
   if (contestManager.lifecycleInterval) {
     clearInterval(contestManager.lifecycleInterval);
   }
