@@ -41,7 +41,7 @@ try {
   console.error('❌ Firebase initialization failed:', error);
 }
 
-// Contest templates with reduced time (1 day less)
+// Contest templates with reduced timing (1 day less)
 const CONTEST_TEMPLATES = [
   {
     id: 'ultimate_crorepati',
@@ -171,7 +171,7 @@ const CONTEST_TEMPLATES = [
   }
 ];
 
-// Contest management system with participant tracking
+// Contest management system with enhanced participant tracking
 class ContestManager {
   constructor() {
     this.activeContests = [];
@@ -219,7 +219,7 @@ class ContestManager {
     console.log('✅ Created local contests with realistic participant counts');
   }
 
-  // Dynamic participant updater that reaches 90% when 1 hour is left
+  // Enhanced participant updater that reaches 90% when 1 hour is left
   startParticipantUpdater() {
     this.participantUpdateInterval = setInterval(() => {
       this.updateParticipantCounts();
@@ -644,21 +644,23 @@ class PaymentProcessor {
         const paymentData = paymentDoc.data();
         const timeSinceCreated = Date.now() - paymentData.createdAt;
 
-        // For QR/UPI payments, require manual confirmation
+        // For QR/UPI payments, NEVER auto-credit - require admin verification
         if (paymentData.method && ['gpay', 'phonepe', 'paytm'].includes(paymentData.method)) {
-          // Only auto-approve QR payments after manual confirmation
-          if (paymentData.manuallyConfirmed && timeSinceCreated > 1 * 60 * 1000) {
+          // QR payments must be manually verified by admin - NO AUTO-CREDITING
+          if (paymentData.adminVerified && paymentData.manuallyConfirmed && timeSinceCreated > 5 * 60 * 1000) {
             await this.creditUserBalance(paymentData, batch);
             
             batch.update(paymentDoc.ref, {
               status: 'completed',
               completedAt: admin.firestore.FieldValue.serverTimestamp(),
-              autoVerified: true,
-              verificationMethod: 'manual_confirmation'
+              adminVerified: true,
+              verificationMethod: 'admin_manual_verification'
             });
 
             processedCount++;
           }
+          // Skip auto-processing for QR payments without admin verification
+          continue;
         } else {
           // Auto-approve non-QR payments after 3 minutes (increased from 2)
           if (timeSinceCreated > 3 * 60 * 1000) {
@@ -729,10 +731,12 @@ class PaymentProcessor {
         amount: amount,
         method: method,
         paymentId: paymentId,
-        status: 'pending',
+        status: 'pending_verification',
         createdAt: Date.now(),
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        manuallyConfirmed: false // QR payments require manual confirmation
+        manuallyConfirmed: false,
+        adminVerified: false, // QR payments require admin verification
+        requiresAdminApproval: ['gpay', 'phonepe', 'paytm'].includes(method)
       };
 
       const docRef = await db.collection('pendingPayments').add(paymentRecord);
@@ -895,7 +899,7 @@ app.post('/api/initiate-payment', async (req, res) => {
     // Different messages for different payment methods
     let message = 'Payment initiated successfully.';
     if (['gpay', 'phonepe', 'paytm'].includes(method)) {
-      message = 'QR payment initiated. Please complete the payment and click "Payment Done" to confirm.';
+      message = 'QR payment initiated. Please complete the payment and contact admin for verification.';
     } else {
       message = 'Payment initiated successfully. Your balance will be credited automatically within 3-5 minutes.';
     }
@@ -908,7 +912,7 @@ app.post('/api/initiate-payment', async (req, res) => {
       amount: amount,
       method: method,
       message: message,
-      requiresManualConfirmation: ['gpay', 'phonepe', 'paytm'].includes(method)
+      requiresAdminVerification: ['gpay', 'phonepe', 'paytm'].includes(method)
     });
 
   } catch (error) {
@@ -917,7 +921,7 @@ app.post('/api/initiate-payment', async (req, res) => {
   }
 });
 
-// Enhanced payment confirmation endpoint
+// Enhanced payment confirmation endpoint (removed manual confirmation for QR)
 app.post('/api/confirm-payment', async (req, res) => {
   try {
     const { paymentId, recordId, uid } = req.body;
@@ -963,17 +967,12 @@ app.post('/api/confirm-payment', async (req, res) => {
       });
     }
 
-    // For QR payments, mark as manually confirmed but don't credit immediately
+    // For QR payments, require admin verification - NO MANUAL CONFIRMATION
     if (['gpay', 'phonepe', 'paytm'].includes(paymentData.method)) {
-      await paymentDoc.ref.update({
-        manuallyConfirmed: true,
-        confirmedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
       return res.json({
-        success: true,
-        message: 'Payment confirmation received. Your balance will be credited within 1-2 minutes after verification.',
-        processing: true
+        success: false,
+        message: 'QR payments require admin verification. Manual confirmation disabled for security.',
+        requiresAdminVerification: true
       });
     } else {
       // For non-QR payments, process immediately
@@ -984,7 +983,7 @@ app.post('/api/confirm-payment', async (req, res) => {
       batch.update(paymentDoc.ref, {
         status: 'completed',
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        manuallyConfirmed: true
+        autoVerified: true
       });
 
       await batch.commit();
@@ -998,6 +997,75 @@ app.post('/api/confirm-payment', async (req, res) => {
 
   } catch (error) {
     console.error('Error confirming payment:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin verification endpoint for QR payments
+app.post('/api/admin/verify-payment', async (req, res) => {
+  try {
+    const { recordId, adminKey, verified } = req.body;
+
+    // Simple admin verification (in production, use proper authentication)
+    if (adminKey !== 'ADMIN_VERIFY_2024') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Unauthorized admin access' 
+      });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Database not available' 
+      });
+    }
+
+    const paymentDoc = await db.collection('pendingPayments').doc(recordId).get();
+    
+    if (!paymentDoc.exists) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Payment not found' 
+      });
+    }
+
+    const paymentData = paymentDoc.data();
+
+    if (verified) {
+      // Admin approved - credit the user
+      const batch = db.batch();
+      await paymentProcessor.creditUserBalance(paymentData, batch);
+      
+      batch.update(paymentDoc.ref, {
+        status: 'completed',
+        adminVerified: true,
+        adminVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        completedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      await batch.commit();
+
+      res.json({
+        success: true,
+        message: 'Payment verified and credited successfully'
+      });
+    } else {
+      // Admin rejected
+      await paymentDoc.ref.update({
+        status: 'rejected',
+        adminVerified: false,
+        adminRejectedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      res.json({
+        success: true,
+        message: 'Payment rejected'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error in admin verification:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1047,7 +1115,7 @@ app.get('/api/payment-status/:recordId', async (req, res) => {
       method: paymentData.method,
       createdAt: paymentData.createdAt,
       completedAt: paymentData.completedAt || null,
-      manuallyConfirmed: paymentData.manuallyConfirmed || false
+      requiresAdminVerification: paymentData.requiresAdminApproval || false
     });
 
   } catch (error) {
@@ -1172,13 +1240,15 @@ app.get('/api/health', (req, res) => {
     automation: profileAutomation.isRunning,
     contests: contestManager.activeContests.length,
     timingReduced: true,
-    paymentSecurity: 'enhanced'
+    paymentSecurity: 'enhanced',
+    qrPaymentGlitchFixed: true,
+    participantGrowthAlgorithm: 'dynamic_90_percent_final_hour'
   });
 });
 
 // Serve the main HTML file
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'attached_assets', 'index.html'));
+  res.sendFile(path.join(__dirname, 'attached_assets', 'index_1751456993829.html'));
 });
 
 // Initialize services
