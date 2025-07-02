@@ -1904,7 +1904,7 @@ function renderWithdrawalHistory() {
         // Admin emails
         const ADMIN_EMAILS = ['vishuu7306@gmail.com'];
 
-        // Contest templates with dynamic lifecycle schedules and compensation prizes
+        // Contest templates with reduced timing (1 day less for each contest)
         const CONTEST_TEMPLATES = [
             {
                 id: 'ultimate_crorepati',
@@ -1912,7 +1912,7 @@ function renderWithdrawalHistory() {
                 entryFee: 1000,
                 maxParticipants: 10000,
                 prizePool: 10000000,
-                cycleDuration: 9 * 24 * 60 * 60 * 1000, // 9 days in milliseconds
+                cycleDuration: 8 * 24 * 60 * 60 * 1000, // REDUCED: 8 days (was 9)
                 drawTime: '18:00', // 6 PM
                 description: 'The ultimate lottery experience! Win up to ₹1 CRORE - the biggest jackpot in Indian online lottery history!',
                 prizeStructure: [
@@ -1933,7 +1933,7 @@ function renderWithdrawalHistory() {
                 entryFee: 50,
                 maxParticipants: 2000,
                 prizePool: 100000,
-                cycleDuration: 1 * 24 * 60 * 60 * 1000, // 1 day in milliseconds
+                cycleDuration: 12 * 60 * 60 * 1000, // REDUCED: 12 hours (was 1 day)
                 drawTime: '18:00', // 6 PM
                 description: 'Our flagship daily lottery with life-changing prizes',
                 prizeStructure: [
@@ -1954,7 +1954,7 @@ function renderWithdrawalHistory() {
                 entryFee: 100,
                 maxParticipants: 1500,
                 prizePool: 150000,
-                cycleDuration: 2 * 24 * 60 * 60 * 1000, // 2 days in milliseconds
+                cycleDuration: 1 * 24 * 60 * 60 * 1000, // REDUCED: 1 day (was 2 days)
                 drawTime: '18:00', // 6 PM
                 description: 'Premium lottery with multiple prize tiers and guaranteed consolation prizes',
                 prizeStructure: [
@@ -1975,7 +1975,7 @@ function renderWithdrawalHistory() {
                 entryFee: 25,
                 maxParticipants: 800,
                 prizePool: 20000,
-                cycleDuration: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
+                cycleDuration: 6 * 60 * 60 * 1000, // REDUCED: 6 hours (was 12 hours)
                 drawTime: ['06:00', '18:00'], // 6 AM and 6 PM
                 description: 'Quick-fire lottery with instant results - runs twice daily',
                 prizeStructure: [
@@ -1996,7 +1996,7 @@ function renderWithdrawalHistory() {
                 entryFee: 200,
                 maxParticipants: 1200,
                 prizePool: 240000,
-                cycleDuration: 3 * 24 * 60 * 60 * 1000, // 3 days in milliseconds
+                cycleDuration: 2 * 24 * 60 * 60 * 1000, // REDUCED: 2 days (was 3 days)
                 drawTime: '18:00', // 6 PM
                 description: 'Festival special with bumper prizes and multiple consolation rewards',
                 prizeStructure: [
@@ -2017,7 +2017,7 @@ function renderWithdrawalHistory() {
                 entryFee: 500,
                 maxParticipants: 1000,
                 prizePool: 500000,
-                cycleDuration: 4 * 24 * 60 * 60 * 1000, // 4 days in milliseconds
+                cycleDuration: 3 * 24 * 60 * 60 * 1000, // REDUCED: 3 days (was 4 days)
                 drawTime: '18:00', // 6 PM
                 description: 'The ultimate dream lottery - your chance to become a crorepati!',
                 prizeStructure: [
@@ -2559,15 +2559,21 @@ function renderWithdrawalHistory() {
 
         async function loadDemoContests() {
             try {
-                // Enable anonymous authentication first to avoid permission issues
+                // Enhanced Firebase authentication and connection
                 if (!auth.currentUser) {
-                    await auth.signInAnonymously();
+                    try {
+                        await auth.signInAnonymously();
+                        console.log('✅ Anonymous authentication successful');
+                    } catch (authError) {
+                        console.warn('⚠️ Authentication failed, proceeding with local data');
+                    }
                 }
 
-                // Load persistent winners first
+                // Load persistent winners first with real-time sync
                 await loadPersistentWinners();
                 
-                // Try to load existing contests from Firestore
+                // Try to load existing contests from Firestore with real-time updates
+                console.log('🔄 Loading contests with real-time Firebase integration...');
                 const contestsSnapshot = await db.collection('contests').get();
                 
                 if (!contestsSnapshot.empty) {
@@ -3449,6 +3455,161 @@ function renderWithdrawalHistory() {
             `;
             document.head.appendChild(style);
         }
+
+        // Automated Profile Update System
+        class AutomatedProfileUpdater {
+            constructor() {
+                this.updateInterval = null;
+                this.isRunning = false;
+            }
+
+            start() {
+                if (this.isRunning || !currentUser) return;
+                
+                this.isRunning = true;
+                console.log('🤖 Starting automated profile updates...');
+                
+                // Update every 15 seconds for real-time sync
+                this.updateInterval = setInterval(() => {
+                    this.performAutomatedUpdate();
+                }, 15000);
+                
+                // Initial update
+                this.performAutomatedUpdate();
+            }
+
+            stop() {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                    this.updateInterval = null;
+                }
+                this.isRunning = false;
+                console.log('⏹️ Automated profile updates stopped');
+            }
+
+            async performAutomatedUpdate() {
+                if (!currentUser || !db) return;
+
+                try {
+                    // Force refresh user data from server
+                    const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                    if (!userDoc.exists) return;
+
+                    const userData = userDoc.data();
+                    
+                    // Check if automated update is needed
+                    if (userData.forceRefresh || userData.lastAutomatedUpdate) {
+                        console.log('🔄 Automated profile sync in progress...');
+                        
+                        // Update local state immediately
+                        const oldBalance = userBalance;
+                        userBalance = userData.balance || userBalance;
+                        joinedContests = userData.joinedContests || joinedContests;
+                        
+                        // Calculate real-time stats
+                        const activeJoinedContests = joinedContests.filter(jc => jc.status === 'joined').length;
+                        const wonContests = joinedContests.filter(jc => jc.status === 'won').length;
+                        const totalPrizes = joinedContests.reduce((sum, jc) => sum + (jc.prizeWon || 0), 0);
+                        
+                        userProfile = {
+                            contestsJoined: joinedContests.length,
+                            contestsWon: wonContests,
+                            totalWinnings: totalPrizes,
+                            winRate: joinedContests.length > 0 ? Math.round((wonContests / joinedContests.length) * 100) : 0
+                        };
+
+                        // Update UI immediately
+                        this.updateUI();
+                        
+                        // Show balance change notification
+                        if (userData.balance > oldBalance) {
+                            const diff = userData.balance - oldBalance;
+                            showNotification(`💰 Balance updated! +₹${diff.toLocaleString()} added automatically`, 'success');
+                        }
+                        
+                        // Load latest transactions
+                        await this.loadLatestTransactions();
+                        
+                        console.log('✅ Automated profile update completed');
+                    }
+                } catch (error) {
+                    console.error('❌ Automated update error:', error);
+                }
+            }
+
+            async loadLatestTransactions() {
+                try {
+                    const transactionsSnapshot = await db.collection('users')
+                        .doc(currentUser.uid)
+                        .collection('transactions')
+                        .orderBy('timestamp', 'desc')
+                        .limit(50)
+                        .get();
+                    
+                    if (!transactionsSnapshot.empty) {
+                        transactions = transactionsSnapshot.docs.map(doc => {
+                            const data = doc.data();
+                            return {
+                                id: doc.id,
+                                ...data,
+                                timestamp: data.timestamp && data.timestamp.toDate ? data.timestamp.toDate() : data.timestamp
+                            };
+                        });
+                        
+                        // Update transactions UI if visible
+                        const transactionsTab = document.getElementById('transactionsTab');
+                        if (transactionsTab && transactionsTab.classList.contains('active')) {
+                            renderTransactions();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading latest transactions:', error);
+                }
+            }
+
+            updateUI() {
+                // Update balance display
+                const balanceElement = document.getElementById('userBalance');
+                if (balanceElement) {
+                    balanceElement.textContent = '₹' + userBalance.toLocaleString();
+                    balanceElement.style.animation = 'none';
+                    setTimeout(() => {
+                        balanceElement.style.animation = 'pulse 0.5s ease-in-out';
+                    }, 10);
+                }
+
+                // Update profile stats
+                updateProfileStats();
+                
+                // Update joined contests display
+                renderJoinedContests();
+                
+                // Force refresh current tab if needed
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab) {
+                    const tabId = activeTab.id.replace('Tab', '');
+                    if (['joinedContests', 'profile', 'transactions'].includes(tabId)) {
+                        // Refresh the current tab data
+                        setTimeout(() => {
+                            switch(tabId) {
+                                case 'joinedContests':
+                                    renderJoinedContests();
+                                    break;
+                                case 'profile':
+                                    updateProfileStats();
+                                    break;
+                                case 'transactions':
+                                    renderTransactions();
+                                    break;
+                            }
+                        }, 100);
+                    }
+                }
+            }
+        }
+
+        // Global automated updater instance
+        let automatedProfileUpdater = null;
 
         async function refreshCurrentUserData() {
             if (!currentUser) return;
@@ -5889,6 +6050,12 @@ function renderWithdrawalHistory() {
 
             renderWinners();
             
+            // Start automated profile updater
+            if (!automatedProfileUpdater) {
+                automatedProfileUpdater = new AutomatedProfileUpdater();
+            }
+            automatedProfileUpdater.start();
+            
             // Start contest timers when user logs in
             setTimeout(() => {
                 if (document.getElementById('contestsTab')?.classList.contains('active')) {
@@ -5896,7 +6063,7 @@ function renderWithdrawalHistory() {
                 }
             }, 1000);
             
-            showNotification('Welcome back! 🎉', 'success');
+            showNotification('Welcome back! 🎉 Automated profile sync enabled.', 'success');
         }
 
         async function handleLogout() {
@@ -5912,6 +6079,12 @@ function renderWithdrawalHistory() {
             userBalance = 0;
             isAdmin = false;
             joinedContests = [];
+
+            // Stop automated profile updater
+            if (automatedProfileUpdater) {
+                automatedProfileUpdater.stop();
+                automatedProfileUpdater = null;
+            }
 
             // Clear timers
             if (contestTimerInterval) {
