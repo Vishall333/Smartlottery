@@ -1904,7 +1904,7 @@ function renderWithdrawalHistory() {
         // Admin emails
         const ADMIN_EMAILS = ['vishuu7306@gmail.com'];
 
-        // Contest templates with reduced timing (1 day less for each contest)
+        // Contest templates with reduced timing (1 day less for each contest) - ENHANCED VERSION
         const CONTEST_TEMPLATES = [
             {
                 id: 'ultimate_crorepati',
@@ -1914,7 +1914,9 @@ function renderWithdrawalHistory() {
                 prizePool: 10000000,
                 cycleDuration: 8 * 24 * 60 * 60 * 1000, // REDUCED: 8 days (was 9)
                 drawTime: '18:00', // 6 PM
-                description: 'The ultimate lottery experience! Win up to ₹1 CRORE - the biggest jackpot in Indian online lottery history!',
+                description: 'The ultimate lottery experience! Win up to ₹1 CRORE - the biggest jackpot in Indian online lottery history! NOW WITH FASTER DRAWS!',
+                scheduleText: 'Every 8 days (Reduced from 9 days)',
+                urgencyText: '⚡ FASTER SCHEDULE!',
                 prizeStructure: [
                     { position: '1st Prize', amount: 5000000, percentage: '50%' },
                     { position: '2nd Prize', amount: 2500000, percentage: '25%' },
@@ -3610,6 +3612,78 @@ function renderWithdrawalHistory() {
 
         // Global automated updater instance
         let automatedProfileUpdater = null;
+        let realTimeBalanceMonitor = null;
+
+        // Enhanced real-time balance monitoring system
+        function startRealTimeBalanceMonitoring() {
+            if (!currentUser || realTimeBalanceMonitor) return;
+            
+            console.log('🔄 Starting real-time balance monitoring...');
+            
+            realTimeBalanceMonitor = setInterval(async () => {
+                try {
+                    if (!currentUser || !db) return;
+                    
+                    const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        const newBalance = userData.balance || 0;
+                        
+                        // Check for balance changes
+                        if (newBalance !== userBalance) {
+                            const diff = newBalance - userBalance;
+                            userBalance = newBalance;
+                            
+                            // Update UI with animation
+                            const balanceElement = document.getElementById('userBalance');
+                            if (balanceElement) {
+                                balanceElement.textContent = '₹' + userBalance.toLocaleString();
+                                balanceElement.style.animation = 'pulse 0.5s ease-in-out';
+                                
+                                // Show notification for balance changes
+                                if (diff > 0) {
+                                    showNotification(`💰 Balance updated! +₹${diff.toLocaleString()} credited automatically`, 'success');
+                                }
+                            }
+                            
+                            // Update profile stats
+                            updateProfileStats();
+                            renderJoinedContests();
+                            renderTransactions();
+                            
+                            console.log(`🔄 Balance automatically updated: ₹${userBalance.toLocaleString()} (${diff >= 0 ? '+' : ''}${diff})`);
+                        }
+                        
+                        // Check for profile updates
+                        const profileChanged = 
+                            userData.contestsJoined !== userProfile.contestsJoined ||
+                            userData.contestsWon !== userProfile.contestsWon ||
+                            userData.totalWinnings !== userProfile.totalWinnings;
+                            
+                        if (profileChanged) {
+                            userProfile = {
+                                contestsJoined: userData.contestsJoined || 0,
+                                contestsWon: userData.contestsWon || 0,
+                                totalWinnings: userData.totalWinnings || 0
+                            };
+                            
+                            updateProfileStats();
+                            console.log('🔄 Profile stats automatically updated');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Real-time monitoring error:', error);
+                }
+            }, 5000); // Check every 5 seconds for real-time updates
+        }
+
+        function stopRealTimeBalanceMonitoring() {
+            if (realTimeBalanceMonitor) {
+                clearInterval(realTimeBalanceMonitor);
+                realTimeBalanceMonitor = null;
+                console.log('⏹️ Real-time balance monitoring stopped');
+            }
+        }
 
         async function refreshCurrentUserData() {
             if (!currentUser) return;
@@ -4505,7 +4579,10 @@ function renderWithdrawalHistory() {
                         ${contest.cycleDuration ? `
                         <div class="detail-row">
                             <span class="detail-label"><i class="fas fa-sync-alt"></i> Schedule:</span>
-                            <span class="detail-value">${getScheduleText(contest)}</span>
+                            <span class="detail-value" style="color: var(--success); font-weight: 600;">
+                                ${getScheduleText(contest)}
+                                ${contest.urgencyText ? `<span style="color: var(--warning); font-size: 0.8rem; margin-left: 8px;">${contest.urgencyText}</span>` : ''}
+                            </span>
                         </div>
                         ` : ''}
                     </div>
@@ -6056,6 +6133,9 @@ function renderWithdrawalHistory() {
             }
             automatedProfileUpdater.start();
             
+            // Start real-time balance monitoring
+            startRealTimeBalanceMonitoring();
+            
             // Start contest timers when user logs in
             setTimeout(() => {
                 if (document.getElementById('contestsTab')?.classList.contains('active')) {
@@ -6063,7 +6143,7 @@ function renderWithdrawalHistory() {
                 }
             }, 1000);
             
-            showNotification('Welcome back! 🎉 Automated profile sync enabled.', 'success');
+            showNotification('Welcome back! 🎉 Real-time profile sync & automatic balance updates enabled.', 'success');
         }
 
         async function handleLogout() {
@@ -6085,6 +6165,9 @@ function renderWithdrawalHistory() {
                 automatedProfileUpdater.stop();
                 automatedProfileUpdater = null;
             }
+
+            // Stop real-time balance monitoring
+            stopRealTimeBalanceMonitoring();
 
             // Clear timers
             if (contestTimerInterval) {
