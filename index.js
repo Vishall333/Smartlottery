@@ -171,12 +171,99 @@ const CONTEST_TEMPLATES = [
   }
 ];
 
-// Contest management system with participant tracking
+// Automated profile update system
+class ProfileAutomationService {
+  constructor() {
+    this.isRunning = false;
+    this.updateInterval = null;
+  }
+
+  start() {
+    if (this.isRunning || !db) {
+      console.log('Profile automation already running or Firebase not available');
+      return;
+    }
+
+    this.isRunning = true;
+    console.log('🚀 Starting automated profile update service...');
+
+    // Run every 30 seconds to ensure real-time updates
+    this.updateInterval = setInterval(() => {
+      this.processProfileUpdates();
+    }, 30000);
+
+    // Initial run
+    this.processProfileUpdates();
+  }
+
+  stop() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
+    this.isRunning = false;
+    console.log('⏹️ Profile automation service stopped');
+  }
+
+  async processProfileUpdates() {
+    try {
+      console.log('🔄 Processing automated profile updates...');
+
+      // Get all users who need profile updates
+      const usersSnapshot = await db.collection('users')
+        .where('forceRefresh', '==', true)
+        .limit(50)
+        .get();
+
+      if (usersSnapshot.empty) {
+        return;
+      }
+
+      const batch = db.batch();
+      let updateCount = 0;
+
+      usersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        const userRef = db.collection('users').doc(doc.id);
+
+        // Calculate updated profile stats
+        const joinedContests = userData.joinedContests || [];
+        const contestsJoined = joinedContests.length;
+        const contestsWon = joinedContests.filter(jc => jc.status === 'won').length;
+        const totalWinnings = joinedContests
+          .filter(jc => jc.prizeWon > 0)
+          .reduce((sum, jc) => sum + (jc.prizeWon || 0), 0);
+
+        // Update profile with calculated stats
+        batch.update(userRef, {
+          contestsJoined: contestsJoined,
+          contestsWon: contestsWon,
+          totalWinnings: totalWinnings,
+          winRate: contestsJoined > 0 ? Math.round((contestsWon / contestsJoined) * 100) : 0,
+          lastProfileUpdate: admin.firestore.FieldValue.serverTimestamp(),
+          forceRefresh: admin.firestore.FieldValue.delete(),
+          profileAutomated: true
+        });
+
+        updateCount++;
+      });
+
+      if (updateCount > 0) {
+        await batch.commit();
+        console.log(`✅ Automated ${updateCount} profile updates`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error in automated profile updates:', error);
+    }
+  }
+}
+
+// Contest management system
 class ContestManager {
   constructor() {
     this.activeContests = [];
     this.lifecycleInterval = null;
-    this.participantUpdateInterval = null;
   }
 
   async initialize() {
@@ -184,87 +271,32 @@ class ContestManager {
       if (!db) {
         console.log('⚠️ Database not available, using local contests');
         this.createLocalContests();
-        this.startParticipantUpdater();
         return;
       }
 
       console.log('🔄 Initializing contest management...');
       await this.loadOrCreateContests();
       this.startLifecycleManager();
-      this.startParticipantUpdater();
       
     } catch (error) {
       console.error('❌ Error initializing contests:', error);
       this.createLocalContests();
-      this.startParticipantUpdater();
     }
   }
 
   createLocalContests() {
-    this.activeContests = CONTEST_TEMPLATES.map(template => {
-      const baseParticipants = Math.floor(template.maxParticipants * 0.15); // Start with 15%
-      return {
-        ...template,
-        currentParticipants: baseParticipants,
-        baseParticipants: baseParticipants,
-        endTime: this.calculateNextDrawTime(template),
-        status: 'active',
-        participants: [],
-        createdAt: new Date(),
-        isActive: true,
-        cycleNumber: 1,
-        title: `${template.title} - Cycle 1`
-      };
-    });
-    console.log('✅ Created local contests with realistic participant counts');
-  }
-
-  // Dynamic participant updater that reaches 90% when 1 hour is left
-  startParticipantUpdater() {
-    this.participantUpdateInterval = setInterval(() => {
-      this.updateParticipantCounts();
-    }, 30000); // Update every 30 seconds
-    console.log('✅ Participant count updater started');
-  }
-
-  updateParticipantCounts() {
-    const now = new Date();
-    
-    this.activeContests.forEach(contest => {
-      if (contest.status !== 'active') return;
-
-      const endTime = new Date(contest.endTime);
-      const timeLeft = endTime.getTime() - now.getTime();
-      const totalDuration = contest.cycleDuration;
-      const oneHourMs = 60 * 60 * 1000; // 1 hour in milliseconds
-      
-      let targetParticipants;
-      
-      if (timeLeft <= oneHourMs) {
-        // In last hour, reach 90% of max participants
-        targetParticipants = Math.floor(contest.maxParticipants * 0.9);
-      } else {
-        // Gradually increase from base (15%) to target (75%) before last hour
-        const progressRatio = 1 - (timeLeft / totalDuration);
-        const baseRatio = 0.15; // Start at 15%
-        const preLastHourRatio = 0.75; // Reach 75% before last hour
-        
-        const currentRatio = baseRatio + (progressRatio * (preLastHourRatio - baseRatio));
-        targetParticipants = Math.floor(contest.maxParticipants * Math.min(currentRatio, preLastHourRatio));
-      }
-      
-      // Ensure participants only increase, never decrease
-      if (targetParticipants > contest.currentParticipants) {
-        const increase = Math.min(
-          Math.ceil((targetParticipants - contest.currentParticipants) / 10), // Gradual increase
-          targetParticipants - contest.currentParticipants
-        );
-        contest.currentParticipants = Math.min(
-          contest.currentParticipants + increase,
-          contest.maxParticipants
-        );
-      }
-    });
+    this.activeContests = CONTEST_TEMPLATES.map(template => ({
+      ...template,
+      currentParticipants: Math.floor(Math.random() * 20) + 5,
+      endTime: this.calculateNextDrawTime(template),
+      status: 'active',
+      participants: [],
+      createdAt: new Date(),
+      isActive: true,
+      cycleNumber: 1,
+      title: `${template.title} - Cycle 1`
+    }));
+    console.log('✅ Created local contests with reduced timing');
   }
 
   async loadOrCreateContests() {
@@ -290,12 +322,10 @@ class ContestManager {
         
         const newEndTime = this.calculateNextDrawTime(template);
         const cycleNumber = (contest.cycleNumber || 0) + 1;
-        const baseParticipants = Math.floor(template.maxParticipants * 0.15);
         
         const updatedContest = {
           ...template,
-          currentParticipants: baseParticipants,
-          baseParticipants: baseParticipants,
+          currentParticipants: Math.floor(Math.random() * 20) + 5,
           endTime: newEndTime,
           status: 'active',
           participants: [],
@@ -315,7 +345,7 @@ class ContestManager {
       
       if (updatedContests.length > 0) {
         await batch.commit();
-        console.log('✅ Updated contests with reduced timing and realistic participants');
+        console.log('✅ Updated contests with reduced timing');
       }
       
       this.activeContests = updatedContests;
@@ -324,12 +354,10 @@ class ContestManager {
       const contests = CONTEST_TEMPLATES.map(template => {
         const endTime = this.calculateNextDrawTime(template);
         const cycleNumber = 1;
-        const baseParticipants = Math.floor(template.maxParticipants * 0.15);
         
         return {
           ...template,
-          currentParticipants: baseParticipants,
-          baseParticipants: baseParticipants,
+          currentParticipants: Math.floor(Math.random() * 20) + 5,
           endTime: endTime,
           status: 'active',
           participants: [],
@@ -348,7 +376,7 @@ class ContestManager {
       await batch.commit();
 
       this.activeContests = contests;
-      console.log('✅ Created new contests with realistic participant distribution');
+      console.log('✅ Created new contests with reduced timing');
     }
   }
 
@@ -574,12 +602,10 @@ class ContestManager {
     try {
       const newEndTime = this.calculateNextDrawTime(template);
       const cycleNumber = (this.activeContests[contestIndex].cycleNumber || 0) + 1;
-      const baseParticipants = Math.floor(template.maxParticipants * 0.15);
       
       const restartedContest = {
         ...template,
-        currentParticipants: baseParticipants,
-        baseParticipants: baseParticipants,
+        currentParticipants: Math.floor(Math.random() * 20) + 5,
         endTime: newEndTime,
         status: 'active',
         participants: [],
@@ -604,244 +630,6 @@ class ContestManager {
   }
 }
 
-// Enhanced Payment verification system with stricter QR verification
-class PaymentProcessor {
-  constructor() {
-    this.pendingPayments = new Map();
-    this.verificationInterval = null;
-    this.qrPaymentAttempts = new Map(); // Track QR payment attempts
-  }
-
-  start() {
-    if (this.verificationInterval) {
-      clearInterval(this.verificationInterval);
-    }
-
-    // Check for payment confirmations every 15 seconds (increased from 10)
-    this.verificationInterval = setInterval(() => {
-      this.processPaymentVerifications();
-    }, 15000);
-
-    console.log('✅ Enhanced payment verification system started');
-  }
-
-  async processPaymentVerifications() {
-    if (!db) return;
-
-    try {
-      // Get pending payments from Firestore
-      const pendingPaymentsSnapshot = await db.collection('pendingPayments')
-        .where('status', '==', 'pending')
-        .limit(20)
-        .get();
-
-      if (pendingPaymentsSnapshot.empty) return;
-
-      const batch = db.batch();
-      let processedCount = 0;
-
-      for (const paymentDoc of pendingPaymentsSnapshot.docs) {
-        const paymentData = paymentDoc.data();
-        const timeSinceCreated = Date.now() - paymentData.createdAt;
-
-        // For QR/UPI payments, require manual confirmation
-        if (paymentData.method && ['gpay', 'phonepe', 'paytm'].includes(paymentData.method)) {
-          // Only auto-approve QR payments after manual confirmation
-          if (paymentData.manuallyConfirmed && timeSinceCreated > 1 * 60 * 1000) {
-            await this.creditUserBalance(paymentData, batch);
-            
-            batch.update(paymentDoc.ref, {
-              status: 'completed',
-              completedAt: admin.firestore.FieldValue.serverTimestamp(),
-              autoVerified: true,
-              verificationMethod: 'manual_confirmation'
-            });
-
-            processedCount++;
-          }
-        } else {
-          // Auto-approve non-QR payments after 3 minutes (increased from 2)
-          if (timeSinceCreated > 3 * 60 * 1000) {
-            await this.creditUserBalance(paymentData, batch);
-            
-            batch.update(paymentDoc.ref, {
-              status: 'completed',
-              completedAt: admin.firestore.FieldValue.serverTimestamp(),
-              autoVerified: true,
-              verificationMethod: 'time_based'
-            });
-
-            processedCount++;
-          }
-        }
-      }
-
-      if (processedCount > 0) {
-        await batch.commit();
-        console.log(`✅ Auto-credited ${processedCount} verified payments`);
-      }
-
-    } catch (error) {
-      console.error('Error processing payment verifications:', error);
-    }
-  }
-
-  async creditUserBalance(paymentData, batch) {
-    if (!paymentData.userId || !paymentData.amount) return;
-
-    try {
-      const userRef = db.collection('users').doc(paymentData.userId);
-      
-      // Credit user balance
-      batch.update(userRef, {
-        balance: admin.firestore.FieldValue.increment(paymentData.amount),
-        lastPaymentAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // Create transaction record
-      const transactionRef = userRef.collection('transactions').doc();
-      batch.set(transactionRef, {
-        type: 'deposit',
-        amount: paymentData.amount,
-        description: `Payment credited - ${paymentData.method || 'Online'}`,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        status: 'completed',
-        paymentId: paymentData.paymentId,
-        method: paymentData.method || 'Online',
-        autoVerified: true,
-        date: new Date().toLocaleDateString('en-IN'),
-        time: new Date().toLocaleTimeString('en-IN')
-      });
-
-      console.log(`💰 Credited ₹${paymentData.amount} to user ${paymentData.userId}`);
-
-    } catch (error) {
-      console.error('Error crediting user balance:', error);
-    }
-  }
-
-  async recordPayment(userId, amount, method, paymentId) {
-    if (!db) return null;
-
-    try {
-      const paymentRecord = {
-        userId: userId,
-        amount: amount,
-        method: method,
-        paymentId: paymentId,
-        status: 'pending',
-        createdAt: Date.now(),
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        manuallyConfirmed: false // QR payments require manual confirmation
-      };
-
-      const docRef = await db.collection('pendingPayments').add(paymentRecord);
-      console.log(`📝 Recorded pending payment: ${paymentId} for ₹${amount} via ${method}`);
-      
-      return docRef.id;
-    } catch (error) {
-      console.error('Error recording payment:', error);
-      return null;
-    }
-  }
-
-  stop() {
-    if (this.verificationInterval) {
-      clearInterval(this.verificationInterval);
-      this.verificationInterval = null;
-    }
-    console.log('⏹️ Payment verification system stopped');
-  }
-}
-
-// Profile automation service
-class ProfileAutomationService {
-  constructor() {
-    this.isRunning = false;
-    this.updateInterval = null;
-  }
-
-  start() {
-    if (this.isRunning || !db) {
-      console.log('Profile automation already running or Firebase not available');
-      return;
-    }
-
-    this.isRunning = true;
-    console.log('🚀 Starting automated profile update service...');
-
-    // Run every 30 seconds to ensure real-time updates
-    this.updateInterval = setInterval(() => {
-      this.processProfileUpdates();
-    }, 30000);
-
-    // Initial run
-    this.processProfileUpdates();
-  }
-
-  stop() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
-    this.isRunning = false;
-    console.log('⏹️ Profile automation service stopped');
-  }
-
-  async processProfileUpdates() {
-    try {
-      console.log('🔄 Processing automated profile updates...');
-
-      // Get all users who need profile updates
-      const usersSnapshot = await db.collection('users')
-        .where('forceRefresh', '==', true)
-        .limit(50)
-        .get();
-
-      if (usersSnapshot.empty) {
-        return;
-      }
-
-      const batch = db.batch();
-      let updateCount = 0;
-
-      usersSnapshot.forEach(doc => {
-        const userData = doc.data();
-        const userRef = db.collection('users').doc(doc.id);
-
-        // Calculate updated profile stats
-        const joinedContests = userData.joinedContests || [];
-        const contestsJoined = joinedContests.length;
-        const contestsWon = joinedContests.filter(jc => jc.status === 'won').length;
-        const totalWinnings = joinedContests
-          .filter(jc => jc.prizeWon > 0)
-          .reduce((sum, jc) => sum + (jc.prizeWon || 0), 0);
-
-        // Update profile with calculated stats
-        batch.update(userRef, {
-          contestsJoined: contestsJoined,
-          contestsWon: contestsWon,
-          totalWinnings: totalWinnings,
-          winRate: contestsJoined > 0 ? Math.round((contestsWon / contestsJoined) * 100) : 0,
-          lastProfileUpdate: admin.firestore.FieldValue.serverTimestamp(),
-          forceRefresh: admin.firestore.FieldValue.delete(),
-          profileAutomated: true
-        });
-
-        updateCount++;
-      });
-
-      if (updateCount > 0) {
-        await batch.commit();
-        console.log(`✅ Automated ${updateCount} profile updates`);
-      }
-
-    } catch (error) {
-      console.error('❌ Error in automated profile updates:', error);
-    }
-  }
-}
-
 // API Routes
 app.get('/api/contests', async (req, res) => {
   try {
@@ -856,202 +644,6 @@ app.get('/api/contests', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching contests:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Enhanced payment initiation endpoint
-app.post('/api/initiate-payment', async (req, res) => {
-  try {
-    const { uid, amount, method, email } = req.body;
-
-    if (!uid || !amount || amount < 10) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid payment data' 
-      });
-    }
-
-    if (!db) {
-      return res.status(503).json({ 
-        success: false, 
-        error: 'Database not available' 
-      });
-    }
-
-    // Generate unique payment ID
-    const paymentId = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Record the payment as pending
-    const recordId = await paymentProcessor.recordPayment(uid, amount, method, paymentId);
-    
-    if (!recordId) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to record payment' 
-      });
-    }
-
-    // Different messages for different payment methods
-    let message = 'Payment initiated successfully.';
-    if (['gpay', 'phonepe', 'paytm'].includes(method)) {
-      message = 'QR payment initiated. Please complete the payment and click "Payment Done" to confirm.';
-    } else {
-      message = 'Payment initiated successfully. Your balance will be credited automatically within 3-5 minutes.';
-    }
-
-    // Return payment details for frontend
-    res.json({
-      success: true,
-      paymentId: paymentId,
-      recordId: recordId,
-      amount: amount,
-      method: method,
-      message: message,
-      requiresManualConfirmation: ['gpay', 'phonepe', 'paytm'].includes(method)
-    });
-
-  } catch (error) {
-    console.error('Error initiating payment:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Enhanced payment confirmation endpoint
-app.post('/api/confirm-payment', async (req, res) => {
-  try {
-    const { paymentId, recordId, uid } = req.body;
-
-    if (!paymentId || !recordId || !uid) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing payment information' 
-      });
-    }
-
-    if (!db) {
-      return res.status(503).json({ 
-        success: false, 
-        error: 'Database not available' 
-      });
-    }
-
-    // Get payment record
-    const paymentDoc = await db.collection('pendingPayments').doc(recordId).get();
-    
-    if (!paymentDoc.exists) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Payment record not found' 
-      });
-    }
-
-    const paymentData = paymentDoc.data();
-    
-    if (paymentData.userId !== uid) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Unauthorized access to payment' 
-      });
-    }
-
-    if (paymentData.status === 'completed') {
-      return res.json({
-        success: true,
-        message: 'Payment already processed',
-        alreadyProcessed: true
-      });
-    }
-
-    // For QR payments, mark as manually confirmed but don't credit immediately
-    if (['gpay', 'phonepe', 'paytm'].includes(paymentData.method)) {
-      await paymentDoc.ref.update({
-        manuallyConfirmed: true,
-        confirmedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      return res.json({
-        success: true,
-        message: 'Payment confirmation received. Your balance will be credited within 1-2 minutes after verification.',
-        processing: true
-      });
-    } else {
-      // For non-QR payments, process immediately
-      const batch = db.batch();
-      await paymentProcessor.creditUserBalance(paymentData, batch);
-      
-      // Update payment status
-      batch.update(paymentDoc.ref, {
-        status: 'completed',
-        completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        manuallyConfirmed: true
-      });
-
-      await batch.commit();
-
-      return res.json({
-        success: true,
-        message: 'Payment confirmed and credited successfully',
-        amount: paymentData.amount
-      });
-    }
-
-  } catch (error) {
-    console.error('Error confirming payment:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Get payment status endpoint
-app.get('/api/payment-status/:recordId', async (req, res) => {
-  try {
-    const { recordId } = req.params;
-    const { uid } = req.query;
-
-    if (!recordId || !uid) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing parameters' 
-      });
-    }
-
-    if (!db) {
-      return res.status(503).json({ 
-        success: false, 
-        error: 'Database not available' 
-      });
-    }
-
-    const paymentDoc = await db.collection('pendingPayments').doc(recordId).get();
-    
-    if (!paymentDoc.exists) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Payment not found' 
-      });
-    }
-
-    const paymentData = paymentDoc.data();
-    
-    if (paymentData.userId !== uid) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      });
-    }
-
-    res.json({
-      success: true,
-      status: paymentData.status,
-      amount: paymentData.amount,
-      method: paymentData.method,
-      createdAt: paymentData.createdAt,
-      completedAt: paymentData.completedAt || null,
-      manuallyConfirmed: paymentData.manuallyConfirmed || false
-    });
-
-  } catch (error) {
-    console.error('Error checking payment status:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1171,20 +763,18 @@ app.get('/api/health', (req, res) => {
     firebase: !!db,
     automation: profileAutomation.isRunning,
     contests: contestManager.activeContests.length,
-    timingReduced: true,
-    paymentSecurity: 'enhanced'
+    timingReduced: true
   });
 });
 
 // Serve the main HTML file
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'attached_assets', 'index.html'));
+  res.sendFile(path.join(__dirname, 'attached_assets', 'index_1751429399286.html'));
 });
 
 // Initialize services
 const profileAutomation = new ProfileAutomationService();
 const contestManager = new ContestManager();
-const paymentProcessor = new PaymentProcessor();
 
 // Start the server
 app.listen(PORT, '0.0.0.0', async () => {
@@ -1195,9 +785,8 @@ app.listen(PORT, '0.0.0.0', async () => {
   if (db) {
     console.log('🔄 Starting automated services...');
     profileAutomation.start();
-    paymentProcessor.start();
     await contestManager.initialize();
-    console.log('✅ All services initialized with enhanced security and realistic participant management');
+    console.log('✅ All services initialized with reduced timing');
   } else {
     console.log('⚠️ Running in development mode without Firebase');
     await contestManager.initialize();
@@ -1208,12 +797,8 @@ app.listen(PORT, '0.0.0.0', async () => {
 process.on('SIGTERM', () => {
   console.log('🛑 Shutting down gracefully...');
   profileAutomation.stop();
-  paymentProcessor.stop();
   if (contestManager.lifecycleInterval) {
     clearInterval(contestManager.lifecycleInterval);
-  }
-  if (contestManager.participantUpdateInterval) {
-    clearInterval(contestManager.participantUpdateInterval);
   }
   process.exit(0);
 });
