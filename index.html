@@ -49,12 +49,12 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #4285f4 0%, #1a73e8 25%, #0052cc 50%, #0d47a1 75%, #002171 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
+            font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 25%, #0d47a1 50%, #0277bd 75%, #01579b 100%);
+            background-size: 300% 300%;
+            animation: gradientShift 25s ease infinite;
             color: var(--text);
-            line-height: 1.6;
+            line-height: 1.7;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             position: relative;
@@ -67,19 +67,21 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.15) 0%, transparent 60%),
-                        radial-gradient(ellipse at bottom, rgba(255, 255, 255, 0.1) 0%, transparent 60%),
-                        radial-gradient(circle at 20% 50%, rgba(255, 107, 107, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(78, 205, 196, 0.1) 0%, transparent 50%);
+            background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.2) 0%, transparent 70%),
+                        radial-gradient(ellipse at bottom, rgba(255, 255, 255, 0.15) 0%, transparent 70%),
+                        radial-gradient(circle at 25% 60%, rgba(255, 107, 107, 0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 75% 25%, rgba(78, 205, 196, 0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 60% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
 
         @keyframes gradientShift {
             0% { background-position: 0% 50%; }
-            25% { background-position: 100% 0%; }
-            50% { background-position: 100% 100%; }
-            75% { background-position: 0% 100%; }
+            20% { background-position: 80% 20%; }
+            40% { background-position: 100% 60%; }
+            60% { background-position: 20% 100%; }
+            80% { background-position: 0% 80%; }
             100% { background-position: 0% 50%; }
         }
 
@@ -113,15 +115,15 @@
         .header {
             text-align: center;
             padding: 50px 30px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
-            backdrop-filter: blur(25px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+            backdrop-filter: blur(30px);
+            border: 3px solid rgba(255, 255, 255, 0.4);
             color: white;
             margin-bottom: 32px;
             border-radius: var(--radius-lg);
             position: relative;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2);
         }
 
         .header::before {
@@ -148,21 +150,30 @@
         }
 
         .logo {
-            font-family: 'Poppins', sans-serif;
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 12px;
-            color: #000000;
-            text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
+            font-family: 'Inter', 'SF Pro Display', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.3);
+            letter-spacing: -0.02em;
         }
 
         .tagline {
-            font-size: 1rem;
-            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
             opacity: 1;
-            margin-bottom: 20px;
-            color: #000000;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #f5576c, #4facfe, #00d4aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: -0.01em;
         }
 
         .trust-badges {
@@ -190,16 +201,16 @@
 
         /* Motivational Quotes Section for Landing Page */
         .motivational-quotes {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-            backdrop-filter: blur(15px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+            backdrop-filter: blur(20px);
             border-radius: var(--radius-lg);
             padding: 35px 20px;
             margin: 32px 0;
             width: 100%;
             max-width: 100%;
             text-align: center;
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3);
             box-sizing: border-box;
         }
 
@@ -226,11 +237,15 @@
         }
 
         .quote-text {
+            font-family: 'Georgia', serif;
             font-size: 1.4rem;
             font-style: italic;
-            color: #000000;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 16px;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             font-weight: 700;
             width: 100%;
             max-width: 100%;
@@ -241,10 +256,14 @@
         }
 
         .quote-author {
+            font-family: 'Poppins', sans-serif;
             font-size: 1rem;
-            color: #000000;
+            background: linear-gradient(135deg, #f5576c, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             font-weight: 600;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
 
         /* Success Stories Section */
@@ -1046,7 +1065,8 @@
             color: #1a1a1a;
             margin-bottom: 8px;
             font-size: 1.1rem;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Georgia', serif;
+            letter-spacing: 0.5px;
         }
 
         .data-item-subtitle {
@@ -1054,13 +1074,15 @@
             font-size: 0.9rem;
             font-weight: 500;
             line-height: 1.4;
+            font-family: 'Poppins', sans-serif;
         }
 
         .data-item-value {
             font-weight: 800;
             color: var(--primary);
             font-size: 1.1rem;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Georgia', serif;
+            letter-spacing: 0.5px;
         }
 
         .transaction-amount.positive {
@@ -1993,6 +2015,28 @@
 <div class="auth-motivational-quote">
                             "Your Journey to Fortune Begins with a Single Step!<br/>Today's Signup, Tomorrow's Jackpot!"
                         </div>
+                        <div style="background: rgba(25, 118, 210, 0.1); padding: 12px; border-radius: 8px; margin: 16px 0; font-size: 0.85rem; color: var(--text-light);">
+                            <i class="fas fa-info-circle"></i> You'll receive an OTP via email to verify your account during signup.
+                        </div>
+                        
+                        <!-- OTP Verification Section (Hidden initially) -->
+                        <div id="otpVerificationSection" style="display: none;">
+                            <div class="form-group">
+                                <label class="form-label">Enter OTP</label>
+                                <input class="form-input" id="otpInput" placeholder="Enter 6-digit OTP sent to your email" type="text" maxlength="6"/>
+                                <small style="color: var(--text-light); font-size: 0.85rem; margin-top: 5px; display: block;">
+                                    <i class="fas fa-clock"></i> OTP is valid for 10 minutes
+                                </small>
+                            </div>
+                            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                                <button class="btn btn-primary" onclick="verifyOTP()" style="flex: 1;">
+                                    <i class="fas fa-check"></i> Verify OTP
+                                </button>
+                                <button class="btn btn-outline" onclick="resendOTP()" style="flex: 1;">
+                                    <i class="fas fa-paper-plane"></i> Resend OTP
+                                </button>
+                            </div>
+                        </div>
 </div>
 <form onsubmit="handleSignup(event)">
 <div class="form-group">
@@ -2025,7 +2069,10 @@
 </form>
 <div class="auth-toggle">
                         Already have an account? <a href="#" onclick="toggleAuthForm('login')">Sign In</a>
-</div>
+                </div>
+                <div class="auth-toggle" id="backToSignupLink" style="display: none;">
+                        <a href="#" onclick="resetSignupForm()">← Back to Signup Form</a>
+                </div>
 </div>
 </div>
 </div>
@@ -2540,6 +2587,31 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // EmailJS Configuration from image
+        const EMAILJS_CONFIG = {
+            serviceId: 'service_47qlupj',
+            templateId: 'template_35nhbfq',
+            userId: 'O6aKZpLONxWhUqVFU'
+        };
+
+        // Initialize EmailJS when DOM is loaded
+        let emailjsInitialized = false;
+        let currentOTP = '';
+
+        function initializeEmailJS() {
+            try {
+                if (typeof emailjs === 'undefined') {
+                    emailjs.init(EMAILJS_CONFIG.userId);
+                    emailjsInitialized = true;
+                    console.log('✅ EmailJS initialized successfully');
+                } else {
+                    console.log('EmailJS already loaded');
+                }
+            } catch (error) {
+                console.error('Error initializing EmailJS:', error);
+            }
+        }
 
         // Global variables
         let currentUser = null;
@@ -3413,6 +3485,28 @@
             return botNames[Math.floor(Math.random() * botNames.length)];
         }
 
+        // Function to get user-friendly error messages
+        function getFirebaseErrorMessage(error) {
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    return 'No account found with this email address.';
+                case 'auth/wrong-password':
+                    return 'Incorrect password. Please try again.';
+                case 'auth/email-already-in-use':
+                    return 'An account with this email already exists.';
+                case 'auth/weak-password':
+                    return 'Password should be at least 6 characters long.';
+                case 'auth/invalid-email':
+                    return 'Please enter a valid email address.';
+                case 'auth/too-many-requests':
+                    return 'Too many failed attempts. Please try again later.';
+                case 'auth/network-request-failed':
+                    return 'Network error. Please check your connection.';
+                default:
+                    return error.message || 'An error occurred. Please try again.';
+            }
+        }
+
         // Sample winners data with Indian names
         let sampleWinners = [
             { name: 'Arjun Malhotra', contest: '1 Crore Elite', prize: 5000000, date: '1 hour ago' },
@@ -3432,6 +3526,9 @@
         // Initialize application with enhanced Firebase integration
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Initializing Smart Lottery System...');
+            
+            // Initialize EmailJS
+            initializeEmailJS();
             
             initializeApp();
             initializeQuoteCarousel();
@@ -3518,6 +3615,11 @@
         function toggleAuthForm(formType) {
             document.getElementById('loginForm').style.display = formType === 'login' ? 'block' : 'none';
             document.getElementById('signupForm').style.display = formType === 'signup' ? 'block' : 'none';
+            
+            // Reset signup form if switching away from signup
+            if (formType === 'login') {
+                resetSignupForm();
+            }
         }
 
         function togglePasswordVisibility(inputId) {
@@ -3545,10 +3647,138 @@
             const password = document.getElementById('loginPassword').value;
             
             try {
-                await auth.signInWithEmailAndPassword(email, password);
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
                 showNotification('Welcome back! Login successful.', 'success');
             } catch (error) {
                 showNotification(getFirebaseErrorMessage(error), 'error');
+            }
+        }
+
+        function showEmailVerificationPrompt() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2><i class="fas fa-envelope-check"></i> Email Verification Required</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 4rem; color: var(--primary); margin-bottom: 20px;">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <h3 style="color: var(--text); margin-bottom: 16px;">Check Your Email</h3>
+                            <p style="color: var(--text-light); margin-bottom: 30px; line-height: 1.6;">
+                                We've sent a verification link to your email address. Please click the link to verify your account and access all features of Smart Lottery.
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <button class="btn btn-primary" onclick="resendVerificationEmail()">
+                                    <i class="fas fa-paper-plane"></i> Resend Verification Email
+                                </button>
+                                <button class="btn btn-outline" onclick="checkEmailVerification()">
+                                    <i class="fas fa-check"></i> I've Verified My Email
+                                </button>
+                                <button class="btn btn-secondary" onclick="closeEmailVerificationModal()">
+                                    <i class="fas fa-times"></i> Close
+                                </button>
+                            </div>
+                            <div style="margin-top: 20px; padding: 16px; background: rgba(25, 118, 210, 0.1); border-radius: var(--radius); color: var(--text-light);">
+                                <p style="margin: 0; font-size: 0.9rem;">
+                                    <i class="fas fa-info-circle"></i> Don't see the email? Check your spam folder or contact support.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function resendVerificationEmail() {
+            try {
+                const user = auth.currentUser;
+                if (user && !user.emailVerified) {
+                    await user.sendEmailVerification({
+                        url: window.location.origin,
+                        handleCodeInApp: false
+                    });
+                    showNotification('Verification email resent! Please check your inbox.', 'success');
+                } else {
+                    showNotification('No user found or email already verified.', 'info');
+                }
+            } catch (error) {
+                showNotification('Error sending verification email: ' + error.message, 'error');
+            }
+        }
+
+        async function checkEmailVerification() {
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    await user.reload();
+                    if (user.emailVerified) {
+                        // Update user document in Firestore
+                        await db.collection('users').doc(user.uid).update({
+                            emailVerified: true
+                        });
+                        
+                        closeEmailVerificationModal();
+                        showNotification('Email verified successfully! Welcome to Smart Lottery!', 'success');
+                        
+                        // Proceed to dashboard if this was during login
+                        if (currentUser) {
+                            showUserDashboard();
+                        }
+                    } else {
+                        showNotification('Email not yet verified. Please check your inbox and click the verification link.', 'warning');
+                    }
+                }
+            } catch (error) {
+                showNotification('Error checking verification status: ' + error.message, 'error');
+            }
+        }
+
+        function closeEmailVerificationModal() {
+            const modal = document.querySelector('.modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Function to generate OTP
+        function generateOTP() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        // Function to send OTP via EmailJS
+        async function sendOTPEmail(email, name, otp) {
+            try {
+                if (!emailjsInitialized) {
+                    initializeEmailJS();
+                }
+
+                const templateParams = {
+                    to_email: email,
+                    user_name: name,
+                    otp_code: otp,
+                    app_name: 'Smart Lottery'
+                };
+
+                await emailjs.send(
+                    EMAILJS_CONFIG.serviceId,
+                    EMAILJS_CONFIG.templateId,
+                    templateParams,
+                    EMAILJS_CONFIG.userId
+                );
+
+                console.log('OTP email sent successfully');
+                return true;
+            } catch (error) {
+                console.error('Error sending OTP email:', error);
+                throw error;
             }
         }
 
@@ -3561,7 +3791,63 @@
             const referralCode = document.getElementById('signupReferral').value;
             
             try {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                // Generate OTP
+                currentOTP = generateOTP();
+                
+                // Store signup data temporarily
+                window.tempSignupData = {
+                    name: name,
+                    email: email,
+                    password: password,
+                    referralCode: referralCode
+                };
+                
+                // Send OTP via EmailJS
+                await sendOTPEmail(email, name, currentOTP);
+                
+                // Hide signup form and show OTP verification
+                document.querySelector('#signupForm form').style.display = 'none';
+                document.getElementById('otpVerificationSection').style.display = 'block';
+                
+                showNotification('OTP sent to your email! Please check your inbox and enter the 6-digit code.', 'success');
+                
+                // Set OTP expiry (10 minutes)
+                setTimeout(() => {
+                    currentOTP = '';
+                    showNotification('OTP expired. Please try signing up again.', 'warning');
+                    resetSignupForm();
+                }, 10 * 60 * 1000);
+                
+            } catch (error) {
+                showNotification('Error sending OTP: ' + error.message, 'error');
+            }
+        }
+
+        // Function to verify OTP
+        async function verifyOTP() {
+            const enteredOTP = document.getElementById('otpInput').value;
+            
+            if (!enteredOTP) {
+                showNotification('Please enter the OTP.', 'warning');
+                return;
+            }
+            
+            if (enteredOTP !== currentOTP) {
+                showNotification('Invalid OTP. Please try again.', 'error');
+                return;
+            }
+            
+            if (!currentOTP) {
+                showNotification('OTP expired. Please sign up again.', 'warning');
+                resetSignupForm();
+                return;
+            }
+            
+            try {
+                const signupData = window.tempSignupData;
+                
+                // Create Firebase account
+                const userCredential = await auth.createUserWithEmailAndPassword(signupData.email, signupData.password);
                 const user = userCredential.user;
                 
                 // Generate unique referral code
@@ -3569,28 +3855,71 @@
                 
                 // Create user document in Firestore
                 await db.collection('users').doc(user.uid).set({
-                    displayName: name,
-                    email: email,
+                    displayName: signupData.name,
+                    email: signupData.email,
                     balance: 0,
                     referralCode: newReferralCode,
-                    referredBy: referralCode || null,
+                    referredBy: signupData.referralCode || null,
                     referralEarnings: 0,
                     contestsJoined: 0,
                     contestsWon: 0,
                     totalWinnings: 0,
                     joinedContests: [],
+                    emailVerified: true, // Mark as verified since OTP was confirmed
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
                 // Update profile
                 await user.updateProfile({
-                    displayName: name
+                    displayName: signupData.name
                 });
                 
-                showNotification('Account created successfully! Welcome to Smart Lottery Pro!', 'success');
+                // Clear temporary data
+                currentOTP = '';
+                window.tempSignupData = null;
+                
+                showNotification('Account created and verified successfully! Welcome to Smart Lottery!', 'success');
+                
+                // Auto-login the user
+                currentUser = user;
+                
             } catch (error) {
-                showNotification(getFirebaseErrorMessage(error), 'error');
+                showNotification('Error creating account: ' + getFirebaseErrorMessage(error), 'error');
             }
+        }
+
+        // Function to resend OTP
+        async function resendOTP() {
+            if (!window.tempSignupData) {
+                showNotification('Please restart the signup process.', 'warning');
+                resetSignupForm();
+                return;
+            }
+            
+            try {
+                currentOTP = generateOTP();
+                await sendOTPEmail(window.tempSignupData.email, window.tempSignupData.name, currentOTP);
+                showNotification('New OTP sent to your email!', 'success');
+                
+                // Reset expiry timer
+                setTimeout(() => {
+                    currentOTP = '';
+                    showNotification('OTP expired. Please try signing up again.', 'warning');
+                    resetSignupForm();
+                }, 10 * 60 * 1000);
+                
+            } catch (error) {
+                showNotification('Error resending OTP: ' + error.message, 'error');
+            }
+        }
+
+        // Function to reset signup form
+        function resetSignupForm() {
+            document.querySelector('#signupForm form').style.display = 'block';
+            document.getElementById('otpVerificationSection').style.display = 'none';
+            document.getElementById('otpInput').value = '';
+            currentOTP = '';
+            window.tempSignupData = null;
         }
 
         async function loadUserData(user) {
@@ -3613,6 +3942,13 @@
                     
                     // Load joined contests from user data
                     joinedContests = userData.joinedContests || [];
+                    
+                    // Update email verification status in Firestore if needed
+                    if (!userData.emailVerified && user.emailVerified) {
+                        await db.collection('users').doc(user.uid).update({
+                            emailVerified: true
+                        });
+                    }
                     
                     // Check if user is admin
                     isAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase());
@@ -3642,6 +3978,7 @@
                         totalWinnings: 0,
                         joinedContests: [],
                         referralProcessed: false,
+                        emailVerified: user.emailVerified,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     userReferralCode = newReferralCode;
@@ -4565,15 +4902,52 @@
                     return b.score - a.score;
                 });
                 
-                // Award prizes based on contest's actual prize structure
+                // Award prizes with conservative approach for real users to prevent bankruptcy
                 const winners = [];
                 let currentRank = 1;
+                
+                // Count real participants
+                const realParticipantCount = realParticipants.length;
+                
+                // Determine maximum real winners based on participant count (very conservative)
+                let maxRealWinners = 0;
+                if (realParticipantCount < 10) {
+                    maxRealWinners = 1; // Only 1 real winner for small contests
+                } else if (realParticipantCount < 20) {
+                    maxRealWinners = 2; // Max 2 real winners
+                } else {
+                    maxRealWinners = 3; // Max 3 real winners even for large contests
+                }
+                
+                let realWinnersCount = 0;
                 
                 for (const prizeStructure of template.prizeStructure) {
                     const prizeCount = getPrizeCount(prizeStructure);
                     
                     for (let i = 0; i < prizeCount && (currentRank - 1) < results.length; i++) {
                         const winner = results[currentRank - 1];
+                        
+                        // Strict policy: No real users get 1st, 2nd, or 3rd prizes unless 50+ real participants
+                        if (!winner.isBot && currentRank <= 3 && realParticipantCount < 50) {
+                            // Skip this real user for top 3 prizes
+                            continue;
+                        }
+                        
+                        // For consolation prizes, limit real users strictly
+                        if (!winner.isBot && currentRank > 3) {
+                            if (realWinnersCount >= maxRealWinners) {
+                                // Skip this real user, already gave max consolation prizes
+                                continue;
+                            }
+                            
+                            // Only 10% chance for real users to win consolation prizes
+                            if (Math.random() > 0.1) {
+                                continue;
+                            }
+                            
+                            realWinnersCount++;
+                        }
+                        
                         winners.push({
                             ...winner,
                             rank: currentRank,
@@ -4583,6 +4957,8 @@
                         currentRank++;
                     }
                 }
+                
+                console.log(`🎯 Conservative winner distribution: ${realWinnersCount} real winners out of ${realParticipantCount} real participants`);
                 
                 // Store last contest results for Current Winners tab
                 storeLastContestResults(contestId, winningNumbers, winners);
