@@ -2571,23 +2571,32 @@
         // Dynamic participant counts stored in Firestore for real-time updates
         let globalParticipantCounts = {};
 
-        // Initialize global contest state with dynamic participant tracking
+        // Initialize global contest state with realistic participant progression
         async function initializeGlobalContestState() {
             const saved = localStorage.getItem('smartLotteryContestState');
             if (saved) {
                 try {
                     globalContestState = JSON.parse(saved);
-                    // Clean up expired contests
+                    // Clean up expired contests and reset with realistic progression
                     Object.keys(globalContestState).forEach(templateId => {
                         const contest = globalContestState[templateId];
                         if (new Date(contest.endTime) < new Date()) {
                             const template = CONTEST_TEMPLATES.find(t => t.id === templateId);
                             if (template) {
+                                const newEndTime = getNextDrawTime(template);
                                 globalContestState[templateId] = {
                                     ...template,
-                                    endTime: getNextDrawTime(template),
-                                    participants: 0 // Start fresh
+                                    endTime: newEndTime,
+                                    participants: calculateRealisticParticipantCount(template, newEndTime),
+                                    startTime: new Date(),
+                                    initialParticipants: Math.floor(template.maxParticipants * 0.15) // Start at 15%
                                 };
+                            }
+                        } else {
+                            // Update existing contest with realistic count
+                            const template = CONTEST_TEMPLATES.find(t => t.id === templateId);
+                            if (template) {
+                                contest.participants = calculateRealisticParticipantCount(template, new Date(contest.endTime));
                             }
                         }
                     });
@@ -2595,25 +2604,75 @@
                     globalContestState = {};
                 }
             } else {
-                // Initialize fresh state
+                // Initialize fresh state with realistic progression
                 CONTEST_TEMPLATES.forEach(template => {
+                    const endTime = getNextDrawTime(template);
                     globalContestState[template.id] = {
                         ...template,
-                        endTime: getNextDrawTime(template),
-                        participants: 0
+                        endTime: endTime,
+                        participants: calculateRealisticParticipantCount(template, endTime),
+                        startTime: new Date(),
+                        initialParticipants: Math.floor(template.maxParticipants * 0.15)
                     };
                 });
             }
             
-            // Load real participant counts from Firestore
+            // Load real participant counts from Firestore and merge with realistic progression
             await loadRealParticipantCounts();
             saveGlobalContestState();
         }
 
-        // Enhanced participant count loading with real-time sync
+        // Calculate realistic participant count based on time progression
+        function calculateRealisticParticipantCount(template, endTime) {
+            if (!template || !endTime) {
+                console.warn('Invalid template or endTime provided to calculateRealisticParticipantCount');
+                return Math.floor(Math.random() * 500) + 100; // Return a safe fallback value
+            }
+            
+            const now = new Date();
+            const totalDuration = endTime.getTime() - (globalContestState[template.id]?.startTime?.getTime() || now.getTime() - (24 * 60 * 60 * 1000));
+            const timeElapsed = now.getTime() - (globalContestState[template.id]?.startTime?.getTime() || now.getTime() - (24 * 60 * 60 * 1000));
+            const timeRemaining = endTime.getTime() - now.getTime();
+            
+            if (timeRemaining <= 0) {
+                // Contest ended, show near max capacity
+                return Math.floor(template.maxParticipants * 0.98);
+            }
+            
+            const thirtyMinutes = 30 * 60 * 1000;
+            const initialParticipants = globalContestState[template.id]?.initialParticipants || Math.floor(template.maxParticipants * 0.15);
+            
+            let targetPercentage;
+            
+            if (timeRemaining <= thirtyMinutes) {
+                // Last 30 minutes: reach 97%
+                const progressInLastThirtyMin = (thirtyMinutes - timeRemaining) / thirtyMinutes;
+                const startPercentage = 0.85; // 85% at 30 min mark
+                const endPercentage = 0.97;   // 97% at end
+                targetPercentage = startPercentage + (progressInLastThirtyMin * (endPercentage - startPercentage));
+            } else {
+                // Before last 30 minutes: gradual increase from 15% to 85%
+                const progressBeforeLastThirtyMin = timeElapsed / (totalDuration - thirtyMinutes);
+                const startPercentage = 0.15;  // 15% at start
+                const endPercentage = 0.85;    // 85% at 30 min mark
+                targetPercentage = Math.min(startPercentage + (progressBeforeLastThirtyMin * (endPercentage - startPercentage)), endPercentage);
+            }
+            
+            // Add small random variation (±2%) to make it look natural
+            const variation = (Math.random() - 0.5) * 0.04; // ±2%
+            targetPercentage = Math.max(0.15, Math.min(0.98, targetPercentage + variation));
+            
+            const calculatedCount = Math.floor(template.maxParticipants * targetPercentage);
+            
+            // Ensure minimum growth over time
+            const lastCount = globalContestState[template.id]?.participants || initialParticipants;
+            return Math.max(calculatedCount, lastCount);
+        }
+
+        // Enhanced participant count loading with realistic progression
         async function loadRealParticipantCounts() {
             try {
-                console.log('Loading participant counts from Firestore...');
+                console.log('Loading participant counts with realistic progression...');
                 
                 for (const template of CONTEST_TEMPLATES) {
                     // Get real participants from contest participants collection
@@ -2622,48 +2681,37 @@
                         .where('status', '==', 'active')
                         .get();
                     
-                    // Get stored count from contest stats
-                    const statsDoc = await db.collection('contestStats').doc(template.id).get();
-                    let baseCount = 0;
-                    
-                    if (statsDoc.exists) {
-                        const data = statsDoc.data();
-                        baseCount = data.participants || 0;
-                        console.log(`Found existing participant count for ${template.id}: ${baseCount}`);
-                    } else {
-                        // Initialize with realistic base count
-                        baseCount = Math.floor(Math.random() * 300) + 200;
-                        await db.collection('contestStats').doc(template.id).set({
-                            participants: baseCount,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                            contestTitle: template.title,
-                            baseCount: baseCount,
-                            realParticipants: 0
-                        });
-                        console.log(`Initialized participant count for ${template.id}: ${baseCount}`);
-                    }
-                    
                     const realCount = participantsSnapshot.size;
                     
-                    // Final count is base count + real participants
-                    const finalCount = baseCount + realCount;
+                    // Get or create realistic base count using progression algorithm
+                    let realisticCount = calculateRealisticParticipantCount(template, new Date(globalContestState[template.id].endTime));
+                    
+                    // Add real participants to the realistic count
+                    const finalCount = realisticCount + realCount;
                     globalParticipantCounts[template.id] = finalCount;
                     
-                    // Update global state with real-time count
+                    // Update global state with calculated count
                     if (globalContestState[template.id]) {
                         globalContestState[template.id].participants = finalCount;
                     }
                     
-                    // Update Firestore with current real participant count
-                    if (realCount > 0) {
-                        await db.collection('contestStats').doc(template.id).update({
+                    // Store in Firestore for consistency across users
+                    try {
+                        await db.collection('contestStats').doc(template.id).set({
+                            participants: finalCount,
+                            realisticCount: realisticCount,
                             realParticipants: realCount,
                             totalParticipants: finalCount,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                            contestTitle: template.title,
+                            endTime: globalContestState[template.id].endTime,
+                            startTime: globalContestState[template.id].startTime || new Date()
+                        }, { merge: true });
+                    } catch (firestoreError) {
+                        console.log('Firestore update failed, using local calculation');
                     }
                     
-                    console.log(`Contest ${template.id}: Base=${baseCount}, Real=${realCount}, Final=${finalCount}`);
+                    console.log(`Contest ${template.id}: Realistic=${realisticCount}, Real=${realCount}, Final=${finalCount}`);
                 }
                 
                 // Set up real-time listener for participant changes
@@ -2671,29 +2719,19 @@
                 
             } catch (error) {
                 console.error('Error loading participant counts:', error);
-                // Enhanced fallback with better persistence
+                // Fallback with realistic progression
                 for (const template of CONTEST_TEMPLATES) {
                     try {
-                        const fallbackCount = Math.floor(Math.random() * 400) + 250;
-                        globalParticipantCounts[template.id] = fallbackCount;
+                        const realisticCount = calculateRealisticParticipantCount(template, new Date(globalContestState[template.id].endTime));
+                        globalParticipantCounts[template.id] = realisticCount;
                         
                         if (globalContestState[template.id]) {
-                            globalContestState[template.id].participants = fallbackCount;
+                            globalContestState[template.id].participants = realisticCount;
                         }
                         
-                        // Store fallback count in Firestore
-                        await db.collection('contestStats').doc(template.id).set({
-                            participants: fallbackCount,
-                            baseCount: fallbackCount,
-                            realParticipants: 0,
-                            totalParticipants: fallbackCount,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                            contestTitle: template.title
-                        }, { merge: true });
-                        
-                        console.log(`Set fallback count for ${template.id}: ${fallbackCount}`);
-                    } catch (storeError) {
-                        console.error('Error storing fallback count:', storeError);
+                        console.log(`Set realistic fallback count for ${template.id}: ${realisticCount}`);
+                    } catch (calcError) {
+                        console.error('Error calculating realistic count:', calcError);
                     }
                 }
             }
@@ -3764,24 +3802,41 @@
             activeContests = [];
             
             CONTEST_TEMPLATES.forEach((template, index) => {
-                // Use global state for consistent timers
-                if (!globalContestState[template.id]) {
-                    globalContestState[template.id] = {
-                        ...template,
-                        endTime: getNextDrawTime(template),
-                        participants: Math.floor(Math.random() * template.maxParticipants * 0.8)
+                try {
+                    // Ensure global state exists with realistic progression
+                    if (!globalContestState[template.id] || !globalContestState[template.id].endTime) {
+                        const endTime = getNextDrawTime(template);
+                        globalContestState[template.id] = {
+                            ...template,
+                            endTime: endTime,
+                            participants: calculateRealisticParticipantCount(template, endTime),
+                            startTime: new Date(),
+                            initialParticipants: Math.floor(template.maxParticipants * 0.15)
+                        };
+                    } else {
+                        // Update participant count based on current time with safety check
+                        const endTime = globalContestState[template.id].endTime;
+                        if (endTime) {
+                            globalContestState[template.id].participants = calculateRealisticParticipantCount(template, new Date(endTime));
+                        }
+                    }
+                
+                // Use consistent participant count from global state
+                    const contest = {
+                        id: template.id + '_' + Date.now() + '_' + index,
+                        templateId: template.id, // Add explicit template ID reference
+                        ...globalContestState[template.id],
+                        participants: globalParticipantCounts[template.id] || globalContestState[template.id].participants
                     };
+                    
+                    activeContests.push(contest);
+                    
+                    const contestCard = createContestCard(contest);
+                    contestGrid.appendChild(contestCard);
+                } catch (error) {
+                    console.error('Error creating contest for template:', template.id, error);
+                    // Continue with next template instead of breaking the entire process
                 }
-                
-                const contest = {
-                    id: template.id + '_' + Date.now() + '_' + index,
-                    ...globalContestState[template.id]
-                };
-                
-                activeContests.push(contest);
-                
-                const contestCard = createContestCard(contest);
-                contestGrid.appendChild(contestCard);
             });
             
             saveGlobalContestState();
@@ -3832,12 +3887,33 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="prize-details" id="prizes_${contest.id}">
-                        ${contest.prizeStructure.map(prize => `
+                        ${contest.prizeStructure.slice(0, 3).map(prize => `
                             <div class="prize-item">
                                 <span class="prize-position">${prize.position}</span>
                                 <span class="prize-amount">₹${formatIndianCurrency(prize.amount)}</span>
                             </div>
                         `).join('')}
+                        ${contest.prizeStructure[3] ? `
+                            <div class="prize-item" style="cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 12px; margin: 4px 0;" onclick="toggleConsolationPrizes('${contest.id}')">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span class="prize-position">${contest.prizeStructure[3].position}</span>
+                                        <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 2px;">Click to view all consolation prizes</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="prize-amount">₹${formatIndianCurrency(contest.prizeStructure[3].amount)}</span>
+                                        <i class="fas fa-chevron-down" id="consolation-toggle-${contest.id}" style="transition: transform 0.3s;"></i>
+                                    </div>
+                                </div>
+                                <div id="consolation-prizes-${contest.id}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(16, 185, 129, 0.2);">
+                                    <div style="color: var(--text-light); font-size: 0.9rem; text-align: center;">
+                                        <strong>All Consolation Prize Winners (${contest.prizeStructure[3].count || 30} winners)</strong><br>
+                                        Each winner receives ₹${formatIndianCurrency(contest.prizeStructure[3].amount)}<br>
+                                        Total consolation prizes: ₹${formatIndianCurrency(contest.prizeStructure[3].amount * (contest.prizeStructure[3].count || 30))}
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
                 <button class="btn btn-primary btn-full" onclick="joinContest('${contest.id}')">
@@ -3869,25 +3945,39 @@
             }
             
             const now = new Date();
-            
-            // Convert endTime to Date if it's not already
             let targetTime;
+            
+            // Handle different endTime formats more robustly
             if (endTime instanceof Date) {
                 targetTime = endTime;
             } else if (typeof endTime === 'string') {
                 targetTime = new Date(endTime);
+            } else if (endTime && typeof endTime === 'object' && endTime.toDate) {
+                // Firebase Timestamp
+                targetTime = endTime.toDate();
             } else {
-                return 'Invalid Time';
+                // Fallback: get proper time from template
+                const template = CONTEST_TEMPLATES.find(t => contestId && contestId.startsWith(t.id));
+                if (template) {
+                    targetTime = getNextDrawTime(template);
+                } else {
+                    return 'Draw Soon';
+                }
             }
             
-            // Ensure targetTime is valid
-            if (isNaN(targetTime.getTime())) {
-                return 'Invalid Time';
+            // Validate the target time
+            if (!targetTime || isNaN(targetTime.getTime())) {
+                const template = CONTEST_TEMPLATES.find(t => contestId && contestId.startsWith(t.id));
+                if (template) {
+                    targetTime = getNextDrawTime(template);
+                } else {
+                    return 'Draw Soon';
+                }
             }
             
             const diff = targetTime.getTime() - now.getTime();
             
-            if (diff <= 0) return 'Draw Soon';
+            if (diff <= 0) return 'Draw in Progress...';
             
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
             const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -3903,10 +3993,9 @@
             }
         }
 
-        // Update countdown timers every second
+        // Update countdown timers and participant counts every second
         function updateCountdowns() {
             const contestCards = document.querySelectorAll('.contest-card');
-            let needsRefresh = false;
             
             contestCards.forEach((card, index) => {
                 const contest = activeContests[index];
@@ -3916,18 +4005,48 @@
                         const currentEndTime = new Date(globalContestState[template.id].endTime);
                         const now = new Date();
                         
-                        // Check if contest expired and needs auto-declaration
+                        // Update participant count with realistic progression
+                        const newParticipantCount = calculateRealisticParticipantCount(template, currentEndTime);
+                        if (globalContestState[template.id].participants !== newParticipantCount) {
+                            globalContestState[template.id].participants = newParticipantCount;
+                            globalParticipantCounts[template.id] = newParticipantCount;
+                            
+                            // Update participant display in card
+                            const participantElement = card.querySelector('.detail-value');
+                            if (participantElement && participantElement.textContent.includes('/')) {
+                                participantElement.textContent = `${newParticipantCount}/${template.maxParticipants}`;
+                            }
+                            
+                            // Update progress bar
+                            const progressBar = card.querySelector('.progress-fill');
+                            if (progressBar) {
+                                const progressPercentage = (newParticipantCount / template.maxParticipants) * 100;
+                                progressBar.style.width = `${progressPercentage}%`;
+                            }
+                        }
+                        
+                        // Check if contest expired and needs auto-declaration (only for admin)
                         if (currentEndTime <= now && isAdmin) {
-                            // Check if we haven't already triggered auto-declaration for this contest
                             const autoKey = `auto_declared_${template.id}`;
-                            if (!lastWinnerUpdate[autoKey] || (now.getTime() - lastWinnerUpdate[autoKey]) > 60000) {
+                            const lastDeclared = lastWinnerUpdate[autoKey] || 0;
+                            
+                            // Only trigger if not declared in the last 5 minutes
+                            if ((now.getTime() - lastDeclared) > 300000) {
                                 console.log('Auto-triggering contest end for:', template.title);
                                 lastWinnerUpdate[autoKey] = now.getTime();
                                 
-                                // Trigger auto-declaration
+                                // Show "Draw in Progress" immediately
+                                const timeLeftElement = card.querySelector('.time-left');
+                                if (timeLeftElement) {
+                                    timeLeftElement.textContent = 'Draw in Progress...';
+                                    timeLeftElement.style.color = 'var(--warning)';
+                                    timeLeftElement.style.fontWeight = '700';
+                                }
+                                
+                                // Delay the actual declaration by 10 seconds as requested
                                 setTimeout(() => {
                                     declareContestWinner(template.id, true);
-                                }, 1000);
+                                }, 10000);
                             }
                         }
                         
@@ -3936,7 +4055,7 @@
                             const timeLeft = getTimeLeft(currentEndTime, template.id);
                             timeLeftElement.textContent = timeLeft;
                             
-                            // Show "Draw Soon" when time is up
+                            // Show "Draw in Progress" when time is up
                             if (currentEndTime <= now) {
                                 timeLeftElement.textContent = 'Draw in Progress...';
                                 timeLeftElement.style.color = 'var(--warning)';
@@ -3946,6 +4065,11 @@
                     }
                 }
             });
+            
+            // Save updated state every 10 seconds to maintain consistency
+            if (Date.now() % 10000 < 1000) {
+                saveGlobalContestState();
+            }
         }
 
         // Admin tab switching function
@@ -4441,7 +4565,7 @@
                     return b.score - a.score;
                 });
                 
-                // Award prizes based on prize structure
+                // Award prizes based on contest's actual prize structure
                 const winners = [];
                 let currentRank = 1;
                 
@@ -4453,7 +4577,7 @@
                         winners.push({
                             ...winner,
                             rank: currentRank,
-                            prize: prizeStructure.amount,
+                            prize: prizeStructure.amount, // Use actual prize amount from contest structure
                             prizePosition: prizeStructure.position
                         });
                         currentRank++;
@@ -4703,29 +4827,46 @@
                 
                 showNotification(`🎉 Live draw completed! Winning number: ${winningNumbers[0]}. ${winners.filter(w => !w.isBot).length} real winners and ${winners.filter(w => w.isBot).length} featured winners!`, 'success');
                 
-                // Reset contest with fresh timer and keep existing participants
+                // Reset contest immediately with fresh timer and clear participants
                 const newEndTime = getNextDrawTime(template);
                 globalContestState[contestId] = {
                     ...template,
                     endTime: newEndTime,
-                    participants: globalParticipantCounts[contestId] || 0 // Keep current participants
+                    participants: 0 // Reset participants for fresh start
                 };
                 
+                // Update participant counts
+                globalParticipantCounts[contestId] = 0;
+                
+                // Store end time in Firestore for global tracking
+                try {
+                    await db.collection('contestEndTimes').doc(contestId).set({
+                        contestId: contestId,
+                        contestTitle: template.title,
+                        endTime: firebase.firestore.Timestamp.fromDate(newEndTime),
+                        processed: false,
+                        restarted: true,
+                        restartedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error storing contest restart time:', error);
+                }
+                
                 saveGlobalContestState();
+                
+                // Clear any existing auto-declaration timer
+                if (autoDeclarationTimers.has(contestId)) {
+                    clearTimeout(autoDeclarationTimers.get(contestId));
+                    autoDeclarationTimers.delete(contestId);
+                }
                 
                 // Set up new auto-declaration timer for this contest
                 const timeUntilEnd = newEndTime.getTime() - new Date().getTime();
                 if (timeUntilEnd > 0 && isAdmin) {
-                    // Clear existing timer
-                    if (autoDeclarationTimers.has(contestId)) {
-                        clearTimeout(autoDeclarationTimers.get(contestId));
-                    }
-                    
-                    // Set new timer
                     const timerId = setTimeout(() => {
                         console.log('Auto-declaring winners for restarted contest:', template.title);
-                        declareContestWinner(contestId);
-                    }, timeUntilEnd);
+                        declareContestWinner(contestId, true);
+                    }, timeUntilEnd + 2000); // Add 2 second buffer
                     
                     autoDeclarationTimers.set(contestId, timerId);
                     console.log(`New auto-declaration timer set for ${template.title} in ${Math.round(timeUntilEnd/1000)} seconds`);
@@ -4889,35 +5030,45 @@
                 return;
             }
             
-            if (!confirm(`Restart "${template.title}" contest? This will reset the timer and keep current participants.`)) {
+            if (!confirm(`Restart "${template.title}" contest? This will reset the timer and participant count.`)) {
                 return;
             }
             
             try {
-                // Get current participant count to maintain consistency
-                let currentParticipants = globalParticipantCounts[contestId] || 0;
-                
-                // Get from Firestore to ensure accuracy
-                const statsDoc = await db.collection('contestStats').doc(contestId).get();
-                if (statsDoc.exists) {
-                    currentParticipants = statsDoc.data().participants || currentParticipants;
-                }
-                
-                // Reset contest with new timer but keep participants
+                // Reset contest with fresh start - new timer and reset participants
                 const newEndTime = getNextDrawTime(template);
+                
+                // Reset global state completely
                 globalContestState[contestId] = {
                     ...template,
                     endTime: newEndTime,
-                    participants: currentParticipants
+                    participants: Math.floor(Math.random() * 200) + 100 // Start with random base
                 };
                 
-                // Update Firestore contest stats
+                // Reset participant counts
+                globalParticipantCounts[contestId] = globalContestState[contestId].participants;
+                
+                // Update Firestore contest stats with fresh data
                 await db.collection('contestStats').doc(contestId).set({
-                    participants: currentParticipants,
+                    participants: globalContestState[contestId].participants,
+                    baseCount: globalContestState[contestId].participants,
+                    realParticipants: 0,
+                    totalParticipants: globalContestState[contestId].participants,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
                     contestTitle: template.title,
                     endTime: newEndTime.toISOString(),
-                    status: 'active'
+                    status: 'active',
+                    restartedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Update contest end times for proper tracking
+                await db.collection('contestEndTimes').doc(contestId).set({
+                    contestId: contestId,
+                    contestTitle: template.title,
+                    endTime: firebase.firestore.Timestamp.fromDate(newEndTime),
+                    processed: false,
+                    restarted: true,
+                    restartedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
                 
                 saveGlobalContestState();
@@ -4925,6 +5076,7 @@
                 // Clear existing auto-declaration timer
                 if (autoDeclarationTimers.has(contestId)) {
                     clearTimeout(autoDeclarationTimers.get(contestId));
+                    autoDeclarationTimers.delete(contestId);
                 }
                 
                 // Set new auto-declaration timer
@@ -4933,7 +5085,7 @@
                     const timerId = setTimeout(() => {
                         console.log('Auto-declaring winners for restarted contest:', template.title);
                         declareContestWinner(contestId, true);
-                    }, timeUntilEnd);
+                    }, timeUntilEnd + 2000); // Add 2 second buffer
                     
                     autoDeclarationTimers.set(contestId, timerId);
                     console.log(`Auto-declaration timer set for ${template.title} in ${Math.round(timeUntilEnd/1000)} seconds`);
@@ -4942,13 +5094,18 @@
                 // Broadcast restart globally
                 broadcastDrawEvent('contest_reset', contestId, {
                     newEndTime: newEndTime,
-                    participants: currentParticipants,
-                    contestTitle: template.title
+                    participants: globalContestState[contestId].participants,
+                    contestTitle: template.title,
+                    restarted: true
                 });
                 
+                // Force immediate refresh
                 generateActiveContests();
-                loadAdminContestGrid();
-                showNotification(`Contest "${template.title}" restarted successfully! Timer reset, participants maintained: ${currentParticipants}`, 'success');
+                if (typeof loadAdminContestGrid === 'function') {
+                    loadAdminContestGrid();
+                }
+                
+                showNotification(`Contest "${template.title}" restarted successfully! New timer: ${getTimeLeft(newEndTime, contestId)}`, 'success');
                 
             } catch (error) {
                 console.error('Error restarting contest:', error);
@@ -5213,6 +5370,21 @@
             details.classList.toggle('show');
         }
 
+        function toggleConsolationPrizes(contestId) {
+            const consolationDiv = document.getElementById(`consolation-prizes-${contestId}`);
+            const chevron = document.getElementById(`consolation-toggle-${contestId}`);
+            
+            if (!consolationDiv || !chevron) return;
+            
+            if (consolationDiv.style.display === 'none' || !consolationDiv.style.display) {
+                consolationDiv.style.display = 'block';
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                consolationDiv.style.display = 'none';
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
         async function joinContest(contestId) {
             if (!currentUser) {
                 showNotification('Please login first', 'error');
@@ -5231,8 +5403,35 @@
                 return;
             }
 
-            // Allow multiple entries to the same contest
-            const templateId = contest.id.split('_')[0];
+            // Extract the base template ID from the contest ID
+            let templateId;
+            if (contest.templateId) {
+                templateId = contest.templateId;
+            } else {
+                // Extract from composite ID (format: templateId_timestamp_index)
+                templateId = contest.id.split('_')[0];
+            }
+            
+            // Find the template in CONTEST_TEMPLATES
+            const template = CONTEST_TEMPLATES.find(t => t.id === templateId);
+            if (!template) {
+                console.error('Template not found for ID:', templateId, 'Available templates:', CONTEST_TEMPLATES.map(t => t.id));
+                showNotification(`Contest template "${templateId}" not found. Please refresh the page.`, 'error');
+                return;
+            }
+            
+            // Initialize contest state if it doesn't exist or is invalid
+            if (!globalContestState[templateId] || !globalContestState[templateId].endTime) {
+                const endTime = getNextDrawTime(template);
+                globalContestState[templateId] = {
+                    ...template,
+                    endTime: endTime,
+                    participants: calculateRealisticParticipantCount(template, endTime),
+                    startTime: new Date(),
+                    initialParticipants: Math.floor(template.maxParticipants * 0.15)
+                };
+                saveGlobalContestState();
+            }
 
             // Generate random lottery numbers for the user
             const lotteryNumbers = generateLotteryNumbers(templateId);
@@ -5285,26 +5484,24 @@
                     status: 'active'
                 });
                 
-                // Get current stats from Firestore for accurate counting
-                const statsDoc = await db.collection('contestStats').doc(templateId).get();
-                let baseCount = 0;
-                let realCount = 0;
+                // Get current realistic count and real participants with safety check
+                const currentRealisticCount = calculateRealisticParticipantCount(
+                    template, 
+                    new Date(globalContestState[templateId].endTime)
+                );
                 
-                if (statsDoc.exists) {
-                    const data = statsDoc.data();
-                    baseCount = data.baseCount || data.participants || 0;
-                    realCount = data.realParticipants || 0;
-                } else {
-                    // Initialize if not exists
-                    baseCount = Math.floor(Math.random() * 300) + 200;
-                    await db.collection('contestStats').doc(templateId).set({
-                        baseCount: baseCount,
-                        participants: baseCount,
-                        realParticipants: 0,
-                        totalParticipants: baseCount,
-                        contestTitle: contest.title,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                // Get real participant count from Firestore
+                let realCount = 0;
+                let baseCount = currentRealisticCount; // Define baseCount
+                try {
+                    const statsDoc = await db.collection('contestStats').doc(templateId).get();
+                    if (statsDoc.exists) {
+                        const data = statsDoc.data();
+                        realCount = data.realParticipants || 0;
+                        baseCount = data.baseCount || currentRealisticCount;
+                    }
+                } catch (error) {
+                    console.log('Firestore stats not available, using local count');
                 }
                 
                 // Increment real participant count
@@ -5729,6 +5926,40 @@
             }
         }
 
+        // Generate sample contest results for all 7 contests if none exist
+        function generateSampleContestResult(template) {
+            const winningNumbers = [Math.floor(Math.random() * 90000) + 10000];
+            const winners = [];
+            let rank = 1;
+            
+            // Generate winners based on actual prize structure
+            template.prizeStructure.forEach(prize => {
+                const count = getPrizeCount(prize);
+                for (let i = 0; i < count && rank <= 50; i++) {
+                    winners.push({
+                        userName: getBotName(),
+                        lotteryNumbers: [Math.floor(Math.random() * 90000) + 10000],
+                        rank: rank,
+                        prize: prize.amount, // Use actual prize amount from structure
+                        prizePosition: prize.position,
+                        isBot: true,
+                        matches: rank <= 3 ? (6 - rank) : Math.floor(Math.random() * 3) + 1
+                    });
+                    rank++;
+                }
+            });
+            
+            return {
+                contestId: template.id,
+                contestTitle: template.title,
+                winningNumbers: winningNumbers,
+                winners: winners,
+                endTime: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000).toISOString(),
+                totalPrizeDistributed: winners.reduce((sum, w) => sum + w.prize, 0),
+                totalWinners: winners.length
+            };
+        }
+
         // Load current contest results (last ended contests)
         async function loadCurrentWinners() {
             const currentWinnersList = document.getElementById('currentWinnersList');
@@ -5738,7 +5969,20 @@
             
             try {
                 // Get stored last contest results
-                const lastContestResults = JSON.parse(localStorage.getItem('smartLotteryLastContestResults') || '[]');
+                let lastContestResults = JSON.parse(localStorage.getItem('smartLotteryLastContestResults') || '[]');
+                
+                // If no stored results or missing contests, generate sample results for all 7 contests
+                if (lastContestResults.length === 0) {
+                    lastContestResults = CONTEST_TEMPLATES.map(template => generateSampleContestResult(template));
+                    localStorage.setItem('smartLotteryLastContestResults', JSON.stringify(lastContestResults));
+                } else if (lastContestResults.length < 7) {
+                    // Add missing contests
+                    const existingContestIds = lastContestResults.map(r => r.contestId);
+                    const missingTemplates = CONTEST_TEMPLATES.filter(t => !existingContestIds.includes(t.id));
+                    const missingResults = missingTemplates.map(template => generateSampleContestResult(template));
+                    lastContestResults = [...lastContestResults, ...missingResults];
+                    localStorage.setItem('smartLotteryLastContestResults', JSON.stringify(lastContestResults));
+                }
                 
                 currentWinnersList.innerHTML = '';
                 
@@ -5835,7 +6079,7 @@
                                             <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 4px;">🥇 ${contest.winners[0]?.userName || 'Suresh Yadav'} - 1st Prize</div>
                                             <div style="font-size: 0.9rem; opacity: 0.9;">Just announced • Number: ${contest.winners[0]?.lotteryNumbers[0] || '49247'}</div>
                                         </div>
-                                        <div style="font-weight: 800; font-size: 1.4rem;">₹5,00,000</div>
+                                        <div style="font-weight: 800; font-size: 1.4rem;">₹${formatIndianCurrency(contest.winners[0]?.prize || 50000)}</div>
                                     </div>
                                 </div>
                                 
@@ -5846,7 +6090,7 @@
                                             <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 4px;">🥈 ${contest.winners[1]?.userName || 'Sudha Verma'} - 2nd Prize</div>
                                             <div style="font-size: 0.9rem; opacity: 0.9;">Just announced • Number: ${contest.winners[1]?.lotteryNumbers[0] || '58083'}</div>
                                         </div>
-                                        <div style="font-weight: 800; font-size: 1.4rem;">₹2,50,000</div>
+                                        <div style="font-weight: 800; font-size: 1.4rem;">₹${formatIndianCurrency(contest.winners[1]?.prize || 25000)}</div>
                                     </div>
                                 </div>
                                 
@@ -5857,59 +6101,56 @@
                                             <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 4px;">🥉 ${contest.winners[2]?.userName || 'Geeta Sharma'} - 3rd Prize</div>
                                             <div style="font-size: 0.9rem; opacity: 0.9;">Just announced • Number: ${contest.winners[2]?.lotteryNumbers[0] || '93033'}</div>
                                         </div>
-                                        <div style="font-weight: 800; font-size: 1.4rem;">₹1,00,000</div>
+                                        <div style="font-weight: 800; font-size: 1.4rem;">₹${formatIndianCurrency(contest.winners[2]?.prize || 10000)}</div>
                                     </div>
                                 </div>
                                 
-                                <!-- Consolation Prize Section -->
-                                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px; border-radius: 12px; margin: 12px 0; text-align: center;">
-                                    <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 800;">🎁 Consolation Prize Winners (4th & 5th)</h3>
-                                    
-                                    ${contest.winners.length > 3 ? `
-                                    <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; margin: 8px 0; text-align: left;">
-                                        <div style="font-weight: 700; color: white; margin-bottom: 4px;">🎁 ${contest.winners[3]?.userName || 'Asha Gupta'} - 4th-33rd Prize</div>
-                                        <div style="font-size: 0.9rem; opacity: 0.9;">Just announced • Number: ${contest.winners[3]?.lotteryNumbers[0] || '60195'}</div>
-                                        <div style="float: right; margin-top: -32px; font-weight: 800; font-size: 1.2rem;">₹500</div>
-                                    </div>
-                                    ` : `
-                                    <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; margin: 8px 0; text-align: left;">
-                                        <div style="font-weight: 700; color: white; margin-bottom: 4px;">🎁 Asha Gupta - 4th-33rd Prize</div>
-                                        <div style="font-size: 0.9rem; opacity: 0.9;">Just announced • Number: 60195</div>
-                                        <div style="float: right; margin-top: -32px; font-weight: 800; font-size: 1.2rem;">₹500</div>
-                                    </div>
-                                    `}
-                                    
-                                    <!-- Additional Consolation Winners with Collapsible -->
-                                    <div style="background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 8px; margin: 8px 0; cursor: pointer;" onclick="toggleConsolationWinners('${contestCardId}')">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div style="text-align: left;">
-                                                <div style="font-weight: 700; font-size: 1rem;">🎁 5th-53rd Prize Winners</div>
-                                                <div style="font-size: 0.9rem; opacity: 0.9;">Click to view all lottery numbers (₹3,000 each)</div>
-                                            </div>
-                                            <div>
-                                                <div style="font-weight: 800; font-size: 1.2rem;">₹3,000</div>
-                                                <i class="fas fa-chevron-down" id="consolation-chevron-${contestCardId}" style="transition: transform 0.3s;"></i>
-                                            </div>
+                                <!-- 4th Prize Card with Collapsible Consolation Prizes -->
+                                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px; border-radius: 12px; margin: 8px 0; border-left: 4px solid #10b981; cursor: pointer;" onclick="toggleConsolationWinners('${contestCardId}')">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 4px;">🎁 ${contest.winners[3]?.userName || 'Asha Gupta'} - 4th Prize</div>
+                                            <div style="font-size: 0.9rem; opacity: 0.9;">Just announced • Number: ${contest.winners[3]?.lotteryNumbers[0] || '60195'}</div>
+                                            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 4px;">Click to view all consolation prizes</div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-weight: 800; font-size: 1.4rem;">₹${formatIndianCurrency(contest.winners[3]?.prize || 500)}</div>
+                                            <i class="fas fa-chevron-down" id="consolation-chevron-${contestCardId}" style="transition: transform 0.3s; margin-top: 4px;"></i>
                                         </div>
                                     </div>
                                     
-                                    <!-- Collapsible Lottery Numbers Grid -->
-                                    <div id="consolation-${contestCardId}" style="display: none; margin: 12px 0; background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 8px;">
-                                        <h4 style="margin: 0 0 12px 0; text-align: center;">5th-53rd Prize Lottery Numbers (₹3,000 each)</h4>
-                                        <div style="text-align: center; margin-bottom: 16px;">
-                                            <div style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 0.9rem; line-height: 1.8; color: white;">
-                                                ${Array.from({length: 49}, (_, index) => {
-                                                    const winner = contest.winners[index + 4];
-                                                    const lotteryNumber = winner?.lotteryNumbers[0] || (Math.floor(Math.random() * 90000) + 10000);
-                                                    return lotteryNumber;
-                                                }).join(', ')}
-                                            </div>
-                                        </div>
-                                        
-                                        <div style="text-align: center; padding: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 6px;">
-                                            <div style="font-weight: 700; margin-bottom: 4px;">Total: 49 Consolation Winners</div>
-                                            <div style="font-size: 0.9rem; opacity: 0.9;">Each winner receives ₹3,000 • Total: ₹${formatIndianCurrency(49 * 3000)}</div>
-                                        </div>
+                                    <!-- Collapsible Consolation Prizes -->
+                                    <div id="consolation-${contestCardId}" style="display: none; margin: 16px 0; background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 8px;">
+                                        ${(() => {
+                                            // Get actual consolation prize data from contest template
+                                            const template = CONTEST_TEMPLATES.find(t => t.id === contest.contestId);
+                                            const consolationPrizeStructure = template?.prizeStructure[3];
+                                            
+                                            const consolationWinners = contest.winners ? contest.winners.slice(3) : [];
+                                            const consolationPrize = consolationPrizeStructure?.amount || (consolationWinners.length > 0 ? consolationWinners[0].prize : 500);
+                                            const consolationCount = consolationPrizeStructure?.count || consolationWinners.length || 30;
+                                            const lastRank = 4 + consolationCount - 1;
+                                            
+                                            // Generate lottery numbers if needed
+                                            const lotteryNumbers = consolationWinners.map(w => w.lotteryNumbers[0]);
+                                            while (lotteryNumbers.length < consolationCount) {
+                                                lotteryNumbers.push(Math.floor(Math.random() * 90000) + 10000);
+                                            }
+                                            
+                                            return `
+                                                <h4 style="margin: 0 0 12px 0; text-align: center; color: white;">🎁 All Consolation Prize Winners (4th-${lastRank}${getOrdinalSuffix(lastRank)})</h4>
+                                                <div style="text-align: center; margin-bottom: 16px;">
+                                                    <div style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 0.9rem; line-height: 1.8; color: white;">
+                                                        ${lotteryNumbers.slice(0, consolationCount).join(', ')}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div style="text-align: center; padding: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 6px;">
+                                                    <div style="font-weight: 700; margin-bottom: 4px; color: white;">Total: ${consolationCount} Consolation Winners</div>
+                                                    <div style="font-size: 0.9rem; opacity: 0.9; color: white;">Each winner receives ₹${formatIndianCurrency(consolationPrize)} • Total: ₹${formatIndianCurrency(consolationCount * consolationPrize)}</div>
+                                                </div>
+                                            `;
+                                        })()}
                                     </div>
                                 </div>
                             </div>
