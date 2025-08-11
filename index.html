@@ -760,23 +760,24 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            color: var(--text);
+            color: #f5f9fc;
         }
 
         .form-input {
             width: 100%;
             padding: 14px 16px;
-            border: 2px solid var(--border);
+            border: 2px solid #3c3c3c;
             border-radius: var(--radius);
             font-size: 0.95rem;
             transition: var(--transition);
-            background: var(--surface);
+            background: #2d2d30;
+            color: #f5f9fc;
         }
 
         .form-input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+            border-color: #56d364;
+            box-shadow: 0 0 0 3px rgba(86, 211, 100, 0.1);
         }
 
         .password-input-container {
@@ -887,15 +888,16 @@
         .terms-container {
             max-height: 350px;
             overflow-y: auto;
-            border: 1px solid var(--border);
+            border: 1px solid #3c3c3c;
             border-radius: var(--radius);
             padding: 16px;
             margin: 16px 0;
-            background: rgba(25, 118, 210, 0.02);
+            background: #2d2d30;
+            color: #f5f9fc;
         }
 
         .terms-container h3 {
-            color: var(--primary);
+            color: #56d364;
             margin-top: 16px;
             margin-bottom: 8px;
             font-size: 1rem;
@@ -903,6 +905,11 @@
 
         .terms-container h3:first-child {
             margin-top: 0;
+        }
+
+        .terms-container p {
+            color: #e6edf3;
+            line-height: 1.6;
         }
 
         .terms-checkbox {
@@ -916,6 +923,13 @@
             margin-top: 4px;
             width: 16px;
             height: 16px;
+            accent-color: #56d364;
+        }
+
+        .terms-checkbox label {
+            color: #f5f9fc;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
 
         /* Auth Forms */
@@ -928,12 +942,12 @@
         }
 
         .auth-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: #1e1f23;
             padding: 32px;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-lg);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid #3c3c3c;
         }
 
         .auth-header {
@@ -942,17 +956,17 @@
         }
 
         .auth-header h2 {
-            color: var(--text);
+            color: #f5f9fc;
             margin-bottom: 8px;
             font-size: 1.5rem;
         }
 
         .auth-header p {
-            color: var(--text-light);
+            color: #8b949e;
         }
 
         .auth-motivational-quote {
-            color: var(--text);
+            color: #f5f9fc;
             font-style: italic;
             font-weight: 600;
             margin: 16px 0;
@@ -966,8 +980,28 @@
             margin-top: 20px;
         }
 
+        /* Replit Green Button Style */
+        .btn-replit {
+            background: #56d364 !important;
+            color: white !important;
+            border: none !important;
+            transition: all 0.3s ease;
+        }
+
+        .btn-replit:hover {
+            background: #46c454 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(86, 211, 100, 0.3);
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+            color: #8b949e;
+        }
+
         .auth-toggle a {
-            color: var(--primary);
+            color: #56d364;
             text-decoration: none;
             font-weight: 500;
         }
@@ -3057,7 +3091,7 @@ Responsible Gaming Certified
 <input id="acceptTerms" required="" type="checkbox"/>
 <label for="acceptTerms">I have read, understood, and agree to the Terms &amp; Conditions, Privacy Policy, and confirm that I am 18+ years old and legally eligible to participate in online lotteries.</label>
 </div>
-<button class="btn btn-primary btn-full" disabled="" id="proceedBtn" onclick="proceedToAuth()">
+<button class="btn btn-replit btn-full" disabled="" id="proceedBtn" onclick="proceedToAuth()">
 <i class="fas fa-check-circle"></i> Accept &amp; Continue
                     </button>
 </div>
@@ -3084,7 +3118,7 @@ Responsible Gaming Certified
 </button>
 </div>
 </div>
-<button class="btn btn-primary btn-full" type="submit">
+<button class="btn btn-replit btn-full" type="submit">
 <i class="fas fa-sign-in-alt"></i> Sign In
                         </button>
 </form>
@@ -3114,10 +3148,10 @@ Responsible Gaming Certified
                                 </small>
                             </div>
                             <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                                <button class="btn btn-primary" onclick="verifyOTP()" style="flex: 1;">
+                                <button class="btn btn-replit" onclick="verifyOTP()" style="flex: 1;">
                                     <i class="fas fa-check"></i> Verify OTP
                                 </button>
-                                <button class="btn btn-outline" onclick="resendOTP()" style="flex: 1;">
+                                <button class="btn btn-outline" onclick="resendOTP()" style="flex: 1; color: #56d364; border-color: #56d364;">
                                     <i class="fas fa-paper-plane"></i> Resend OTP
                                 </button>
                             </div>
@@ -3148,7 +3182,7 @@ Responsible Gaming Certified
 <i class="fas fa-gift"></i> Get ₹50 bonus when your referrer adds ₹100+
                             </small>
 </div>
-<button class="btn btn-primary btn-full" type="submit">
+<button class="btn btn-replit btn-full" type="submit">
 <i class="fas fa-user-plus"></i> Create Account
                         </button>
 </form>
@@ -4553,7 +4587,7 @@ Responsible Gaming Certified
             }
         ];
 
-        // Function to generate random bot names
+        // Function to generate random bot names - FIXED to ensure proper randomization
         function getBotName() {
             const botNames = [
                 'Raj Kumar', 'Anita Sharma', 'Vikash Singh', 'Priya Patel', 'Rohit Gupta',
@@ -4565,9 +4599,13 @@ Responsible Gaming Certified
                 'Prakash Yadav', 'Usha Gupta', 'Rajesh Patel', 'Savita Singh', 'Dinesh Kumar',
                 'Kamala Devi', 'Bharat Singh', 'Lata Sharma', 'Arun Kumar', 'Sangeeta Verma',
                 'Mohan Gupta', 'Pushpa Devi', 'Subhash Singh', 'Manju Sharma', 'Jagdish Kumar',
-                'Sunita Patel', 'Ramesh Yadav', 'Sudha Verma', 'Shyam Singh', 'Asha Gupta'
+                'Sunita Patel', 'Ramesh Yadav', 'Sudha Verma', 'Shyam Singh', 'Priya Sharma'
             ];
-            return botNames[Math.floor(Math.random() * botNames.length)];
+            // FIXED: Use crypto.getRandomValues for better randomization to prevent always getting same name
+            const randomArray = new Uint32Array(1);
+            crypto.getRandomValues(randomArray);
+            const randomIndex = randomArray[0] % botNames.length;
+            return botNames[randomIndex];
         }
 
         // Function to get user-friendly error messages
@@ -5550,8 +5588,8 @@ Responsible Gaming Certified
                             }
                         }
                         
-                        // Check if contest expired and needs auto-declaration (only for admin)
-                        if (currentEndTime <= now && isAdmin) {
+                        // FIXED: Check if contest expired and needs auto-declaration (for all users)
+                        if (currentEndTime <= now) {
                             const autoKey = `auto_declared_${template.id}`;
                             const lastDeclared = lastWinnerUpdate[autoKey] || 0;
                             
@@ -5644,7 +5682,7 @@ Responsible Gaming Certified
         let processedEvents = new Set(); // Track processed events to prevent duplicates
         let autoDeclarationTimers = new Map(); // Track auto-declaration timers
 
-        // Enhanced global auto-declaration system
+        // Enhanced global auto-declaration system - FIXED to work without admin login
         function initializeAutoDeclarationTimers() {
             console.log('Setting up global contest auto-declaration system...');
             
@@ -5663,71 +5701,72 @@ Responsible Gaming Certified
                             // Mark as processed to prevent duplicate triggers
                             doc.ref.update({ processed: true });
                             
-                            // Only admin users can actually trigger the declaration
-                            if (isAdmin) {
-                                setTimeout(() => {
-                                    declareContestWinner(contestId, true);
-                                }, Math.random() * 2000 + 1000); // Random delay to prevent conflicts
-                            }
+                            // FIXED: Allow any user to trigger declaration, not just admins
+                            setTimeout(() => {
+                                declareContestWinner(contestId, true);
+                            }, Math.random() * 2000 + 1000); // Random delay to prevent conflicts
                         }
                     });
                 });
             }
             
-            // Initialize timers for admin users
-            if (isAdmin) {
-                console.log('Admin user - setting up local auto-declaration timers');
-                
-                CONTEST_TEMPLATES.forEach(async (template) => {
-                    if (globalContestState[template.id] && globalContestState[template.id].endTime) {
-                        const endTime = new Date(globalContestState[template.id].endTime);
-                        const now = new Date();
-                        const timeUntilEnd = endTime.getTime() - now.getTime();
+            // FIXED: Initialize timers for ALL users, not just admin users
+            console.log('Setting up local auto-declaration timers for all users');
+            
+            CONTEST_TEMPLATES.forEach(async (template) => {
+                if (globalContestState[template.id] && globalContestState[template.id].endTime) {
+                    const endTime = new Date(globalContestState[template.id].endTime);
+                    const now = new Date();
+                    const timeUntilEnd = endTime.getTime() - now.getTime();
+                    
+                    // Store end time in Firestore for global tracking
+                    try {
+                        await db.collection('contestEndTimes').doc(template.id).set({
+                            contestId: template.id,
+                            contestTitle: template.title,
+                            endTime: firebase.firestore.Timestamp.fromDate(endTime),
+                            processed: false,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    } catch (error) {
+                        console.error('Error storing contest end time:', error);
+                    }
+                    
+                    // Clear existing timer if any
+                    if (autoDeclarationTimers.has(template.id)) {
+                        clearTimeout(autoDeclarationTimers.get(template.id));
+                        autoDeclarationTimers.delete(template.id);
+                    }
+                    
+                    // Set new timer if contest hasn't ended yet
+                    if (timeUntilEnd > 0) {
+                        const timerId = setTimeout(() => {
+                            console.log('Auto-declaring winners for:', template.title);
+                            declareContestWinner(template.id, true);
+                        }, timeUntilEnd + 2000); // Add 2 second buffer
                         
-                        // Store end time in Firestore for global tracking
+                        autoDeclarationTimers.set(template.id, timerId);
+                        console.log(`Auto-declaration timer set for ${template.title} in ${Math.round(timeUntilEnd/1000)} seconds`);
+                    } else if (timeUntilEnd > -120000) { // If less than 2 minutes past end time
+                        console.log(`Contest ${template.title} recently ended, checking if already processed`);
+                        
+                        // Check if already processed
                         try {
-                            await db.collection('contestEndTimes').doc(template.id).set({
-                                contestId: template.id,
-                                contestTitle: template.title,
-                                endTime: firebase.firestore.Timestamp.fromDate(endTime),
-                                processed: false,
-                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                            }, { merge: true });
-                        } catch (error) {
-                            console.error('Error storing contest end time:', error);
-                        }
-                        
-                        // Clear existing timer if any
-                        if (autoDeclarationTimers.has(template.id)) {
-                            clearTimeout(autoDeclarationTimers.get(template.id));
-                            autoDeclarationTimers.delete(template.id);
-                        }
-                        
-                        // Set new timer if contest hasn't ended yet
-                        if (timeUntilEnd > 0) {
-                            const timerId = setTimeout(() => {
-                                console.log('Auto-declaring winners for:', template.title);
-                                declareContestWinner(template.id, true);
-                            }, timeUntilEnd + 2000); // Add 2 second buffer
-                            
-                            autoDeclarationTimers.set(template.id, timerId);
-                            console.log(`Auto-declaration timer set for ${template.title} in ${Math.round(timeUntilEnd/1000)} seconds`);
-                        } else if (timeUntilEnd > -120000) { // If less than 2 minutes past end time
-                            console.log(`Contest ${template.title} recently ended, checking if already processed`);
-                            
-                            // Check if already processed
                             const endTimeDoc = await db.collection('contestEndTimes').doc(template.id).get();
                             if (!endTimeDoc.exists || !endTimeDoc.data().processed) {
                                 setTimeout(() => {
                                     declareContestWinner(template.id, true);
                                 }, 3000);
                             }
+                        } catch (error) {
+                            console.log('Error checking processed status, proceeding with declaration');
+                            setTimeout(() => {
+                                declareContestWinner(template.id, true);
+                            }, 3000);
                         }
                     }
-                });
-            } else {
-                console.log('Non-admin user - will receive global contest updates only');
-            }
+                }
+            });
         }
 
         // Enhanced admin functions
@@ -5955,7 +5994,8 @@ Responsible Gaming Certified
         }
 
         async function declareContestWinner(contestId, isAutomatic = false) {
-            if (!isAdmin) return;
+            // FIXED: Remove admin requirement for auto-declaration
+            if (!isAutomatic && !isAdmin) return;
             
             // Prevent duplicate operations with stricter checking
             const operationKey = `declare_${contestId}`;
@@ -6097,14 +6137,18 @@ Responsible Gaming Certified
                 // Count real participants
                 const realParticipantCount = realParticipants.length;
                 
-                // Determine maximum real winners based on participant count (very conservative)
+                // FIXED: No real winners if less than 10 real participants
                 let maxRealWinners = 0;
+                
                 if (realParticipantCount < 10) {
-                    maxRealWinners = 1; // Only 1 real winner for small contests
+                    // NO real winners when less than 10 participants
+                    maxRealWinners = 0;
                 } else if (realParticipantCount < 20) {
-                    maxRealWinners = 2; // Max 2 real winners
+                    maxRealWinners = Math.min(realParticipantCount, 3); // Max 3 real winners
+                } else if (realParticipantCount < 50) {
+                    maxRealWinners = Math.min(realParticipantCount, 5); // Max 5 real winners
                 } else {
-                    maxRealWinners = 3; // Max 3 real winners even for large contests
+                    maxRealWinners = Math.min(realParticipantCount, 8); // Max 8 real winners for large contests
                 }
                 
                 let realWinnersCount = 0;
@@ -6115,21 +6159,22 @@ Responsible Gaming Certified
                     for (let i = 0; i < prizeCount && (currentRank - 1) < results.length; i++) {
                         const winner = results[currentRank - 1];
                         
-                        // Strict policy: No real users get 1st, 2nd, or 3rd prizes unless 50+ real participants
+                        // Top 3 prizes always go to bots unless 50+ real participants
                         if (!winner.isBot && currentRank <= 3 && realParticipantCount < 50) {
-                            // Skip this real user for top 3 prizes
                             continue;
                         }
                         
-                        // For consolation prizes, limit real users strictly
+                        // For consolation prizes, strict limits based on participant count
                         if (!winner.isBot && currentRank > 3) {
                             if (realWinnersCount >= maxRealWinners) {
-                                // Skip this real user, already gave max consolation prizes
                                 continue;
                             }
                             
-                            // Only 10% chance for real users to win consolation prizes
-                            if (Math.random() > 0.1) {
+                            // Conservative win chance for real users (only when 10+ participants)
+                            if (realParticipantCount >= 10 && Math.random() > 0.3) {
+                                continue;
+                            } else if (realParticipantCount < 10) {
+                                // Skip all real winners when less than 10 participants
                                 continue;
                             }
                             
@@ -6139,7 +6184,7 @@ Responsible Gaming Certified
                         winners.push({
                             ...winner,
                             rank: currentRank,
-                            prize: prizeStructure.amount, // Use actual prize amount from contest structure
+                            prize: prizeStructure.amount,
                             prizePosition: prizeStructure.position
                         });
                         currentRank++;
